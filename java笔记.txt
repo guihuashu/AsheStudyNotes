@@ -1,0 +1,941 @@
+书: <java开发实战经典, 李兴华著>
+android
+		APP
+		Framework		
+		封装
+		
+Linux
+		驱动 
+
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+					第一章 java基础知识
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+【一】Linux java开发环境搭建
+	sudo rm /var/cache/apt/archives/lock
+	sudo rm /var/lib/dpkg/lock
+	sudo dpkg --configure -a
+	sudo apt-get updata
+	sudo apt-get install openjdk-8-jdk
+	sudo apt-get install openjdk-8-jre
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】语法
+	1.java没有头文件
+	2.java用System.out.println("Hello, word!");
+	3.编译: javac Hello.javac
+		编译出了一个Hello.class的java可执行程序
+	4.运行可执行程序
+		java Hello		// java命令是启动一个java虚拟机来执行Hello.class程序
+	5.java编程规范规定类名必须要大写
+	6.类名必须与文件名保持一致
+	7.同一个文件中, 只有与文件同名的类被声明为public, 其他类不能声明为public
+	8.java的成员变量和默认属性是公有的
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+					第二章 java语法及数据类型
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+【一】基本数据类型（用unicode编码）	: 
+		类型			字节			描述
+		 byte 				1
+		 boolean			1
+		 char 		 		2				可以表示任何国家的一个字	
+		 short				2		
+		 int 					4
+		 long				8
+		 float				32
+		 double 			64
+		注意：
+				1. java没指针
+				2.sourceinsignt写的代码默认采用ASCII编码， 而java编译器采用UTF8来解析代码；
+						 所以当我们输入汉字的时候，java编译器就不能用utf8来解析ASCII的汉字，说以我们需要用notepad转码
+				3.java的引用数据类型不需要释放操作
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】引用数据类型:		// 除了基本数据类型之外的所有类型都是引用数据类型, 引用数据类型保存在堆中.
+(1)数组	
+		1.int p[] = new int[10];			
+				1.p保存在栈中, 分配的40个字节在堆中, p指向这段堆空间的首地址
+				2.动态分配
+		2.char str[] = new char [100];	
+				1.str在栈中并指向分配的堆空间, 100x2在堆中
+				2.动态分配
+		3.// char str[100]是非法的
+				1.c语言中: str连续的100个字节都保存在栈中
+		4.	int p2[] = {1, 2, 4}	// 静态分配
+			1.java中的语法是: p2保存在栈中, {1, 2, 4}保存在堆中, 属于静态分配
+			2.c语言的语法是:  p2保存在栈中,  {1, 2, 4}也在栈中
+		
+		
+		
+		小结:
+			1.java所有的数组都是引用数据类型(数组分配的空间永远是放在堆里面的).
+			2.java数组分配分配的空间永远都是在堆中, 变量保存在栈中并指向分配的堆空间.
+(2)String	
+		1.在java里面字符串"abc"是一个String类, 所以char str[] = "abc"是非法的
+		2. String str2 =  "abc";  str2在栈中, "abc"在堆中.
+	接口
+	null
+(3)java的垃圾自动回收机制
+	1.java没有delete或者free机制
+	2.我们只需要让引用变量=null，java就会清除堆中分配的空间
+		如：
+			char str[] = new char [100];	
+			str = null;
+			//1.str在栈中并指向分配的堆空间, 100x2在堆中
+	3.当多个变量引用同一段堆空间时,引用的变量都设置为NULL, 被引用的堆空间才会被释放
+		如:
+			char str[] = new char [100];	
+			char str2[] = str;
+			str = null;
+			str2 = null;
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【三】数据类型转换	
+
+(1)有小数的数默认为double类型
+		//float a = 3.14 是错误的, 因为3.14默认是double类型
+		
+(2)自动转换
+	float a = 3.14f				//表示 3.14是float类型
+	
+(3)强制类型转换
+	float a = (float)3.14		// 将double类型转换为float类型
+(4)整数默认为int型, 向小类型转换时编译器能自动识别
+	int a = 5;
+	short c = 5;				// 编译器会自动辨别 5没有超过short表示的范围, 编译器就不会报错。
+	short c = 500000； // 错误
+(5)对于变量不能实现确定其类型
+	int a = 5;
+	short c = a;		// 错误
+(5)小类型与大类型运算时, 小类型会默认转换为大类型.
+	short a = 5;
+	a = a+1			//  :  a+1中的a默认转换为int型, 而a=中的a时int类型, 小类型不能自动转换为大类型
+(6)byte, short的运算, 为了保证精度,会自动转换为int类型
+		short s = 5;
+		short s2 = 3;
+		s2 = s2 + s;	// 错误, 为了保证精度,s2 + s中的s2和s都转换为了int类型
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【四】运算符、表达式、语句	// 基本上跟c语言完全一样
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【方法】		// 相当于c语言中的函数
+(1)语法
+	public class Function {
+		public static void main (String args[]){
+			Sysytm.out.println(add(1,2));
+		}
+		public static int add(int x, int y){
+			return x+y;
+		}
+	}
+(2)重载
+	跟C++相同
+(3)传参
+	1.进行值传递时, 原变量不会被改变
+		public class Function {
+			public static void main (String args[]){
+				int x = 1; 
+				func(x);
+				Sysytm.out.println(x);	// 1
+			}
+			public static void func(int x) {
+				x = 100;
+			}
+		}
+	2.传递引用时值会被函数修改
+		public class Function {
+			public static void main (String args[]){
+				int p[]  = new (1);
+				p[0] = 100;
+				func(p);
+				Sysytm.out.println("p[0] = "+p[0]);	// 200;+用来分割, 相当于c语言中的逗号。
+			}
+			public static void func(int[]  p) {
+				p[0] = 200;
+			}
+		}
+		
+		
+	
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+					第三章 面向对象的程序设计
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+【一】类		// 是引用数据类型需要new来分配空间
+	例：
+		class Person {
+			String name;
+			String getName() {
+				return "guangdong" + name;	// 字符串默认是一个String对象
+			}
+		};
+		public class Oop {
+			public static void main(String args[]) {
+				Person p1 = null;	// 类是引用数据类型需要new来分配空间
+				p1 = new Person();
+				p1.name  = "zhangshan";
+				
+				Person p2 = null;	// 类是引用数据类型需要new来分配空间
+				p2 = new Person;
+				p2.name  = "lishi";
+				
+				System.out.println(p1.getName());
+				System.out.println(p2.getName());
+			}
+		}
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】类的构造方法
+(1)语法
+	访问权限 类名(args...) {
+		程序语句;
+		// 构造方法没有返回值
+	}
+
+(2)举例
+		class Person {
+			String name;
+			String getName() {
+				return "guangdong" + name;	// 字符串默认是一个String对象
+			}
+			public Person(String str) {
+				name = str;
+			}
+		};
+		public class Oop {
+			public static void main(String args[]) {
+				Person p1 = new Person("zhangshan");	// 类是引用数据类型需要new来分配空间
+			}
+		}
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【三】this表示当前对象
+	class Person {
+		String name;
+		String getName() {
+			return "guangdong" + name;	// 字符串默认是一个String对象
+		}
+		public Person(String name) {
+			this.name = name;	// this表示当前对象
+		}
+	};
+	public class Oop {
+		public static void main(String args[]) {
+			Person p1 = new Person("zhangshan");	// 类是引用数据类型需要new来分配空间
+		}
+	}
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【四】类的静态属性。 这个属性不属于某个类对象， 而是属于这个类
+	class Person {
+		static public print() {		// 声明为静态方法
+			System.out.println("static func");
+		}
+		static int cout;			// 声明为静态成员
+	};
+	public class Oop {
+		public static void main(String args[]) {
+			Person.print();			// 调用类的静态方法
+			System.out.println(Person.cout);
+		}
+	}
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【五】构造代码块
+①说明： 
+	1.构造函数是同一个道理，当每实例化一个对象时，会执行代码块中的代码。
+	2.构造块先于构造函数执行
+②语法： 在类中直接用{ }的区域为代码块
+	class Person {
+		// 构造代码块区域
+		{
+			System.out.println("this is building block");
+		}
+	};
+	public class Oop {
+		public static void main(String args[]) {
+			Person p1 = new Person();	// 将执行构造块中的代码
+		}
+	}
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【六】普通代码块
+①说明： 
+	1.就是类的方法(函数)里面的代码区域
+②语法： 
+	class Person {
+		void print(){
+			// 这是普通代码块区域
+			System.out.println("this is building block");
+		}
+	};
+	public class Oop {
+		public static void main(String args[]) {
+			Person p1 = new Person();	
+		}
+	}
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【七】静态代码块
+①说明： 
+	1.在类中用 static{ } 包含的区域为静态代码块
+	2.静态代码块是类的属性, 不属于某个对象
+	3.静态代码块在实例化第一个对象时被执行, 且只执行一次。
+	4.静态代码块先于第一个对象的构造函数执行
+②举例	
+	class Person {
+		// 静态代码块区域, 先于第一个对象的构造函数执行, 且执行一次
+		static {
+			System.out.println("this is building block");
+		}
+	};
+	public class Oop {
+		public static void main(String args[]) {
+			Person p1 = new Person();	// 将执行构造块中的代码
+		}
+	}
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+					第四章 封装性
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+【一】权限
+①概述：
+	在类里面无论是成员还是方法都可以用关键字来声明的他权限。
+②权限
+	private:
+	default:
+	protected:
+	public:
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】使用方法来访问属性
+
+
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+					第五章 继承性	// java不允许多重继承(只能继承至一个对象)
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+【一】引入
+①格式
+	class Student extends Person {
+	
+	};
+
+②构造方法
+	1.如果类中没有实现构造方法, 编译器会分配一个空的构造方法。
+	2.实例化子类对象时，先调用父类的构造方法，再调用子类的构造方法。
+③super关键字用于向父类的构造函数传递参数, 否则默认将调用父类的无参构造函数。  
+	如：
+		class Person {
+			int age;
+			public Person(int age) {
+				this.age = age;
+			}
+		};
+		public class Student {
+			private String scheool
+			public Student(String scheool){
+				super(5);	// 传递参数给父类的构造函数"Person(int age)"
+				this.scheool = scheool;
+			}
+		}
+		public class Ext4 {
+			public static void main(String args[]){
+				Student stu = new Student("ustc");	// 调用构造函数"public Student(String scheool)"
+			}
+		}
+④final关键字
+	1.final类不能有子类
+	2.final方法不能被覆写
+	3.final变量变成常量, 不能被修改.
+	
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】继承的限制
+1.与C++不同的是从父类继承的东西不能据为己有,必须能传下去。
+	// 而C++可以使用using调整继承访问控制:
+		// 比如: using Father::room_key	(儿子将家里的钥匙私藏起来)
+	java例子:
+		class Father {
+			public void func(){
+			}
+		};
+		class Son {
+			private void func(){	// 错误不能将父类的公有成员或者方法变为私有
+			}
+		}
+	注意: 
+		class Father {
+			private void func(){
+			}
+		};
+		class Son {
+			public void func(){	这不是覆写父类的方法, 因为父类的这个方法对Son根本就不可见.这是Son独创的方法
+			}
+		}
+	
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【三】抽象类
+①语法
+	在类名前加上abstract关键字
+②注意
+	1.抽象类中必须有抽象方法, 抽象方法仅需声明,不允许要实现。
+	2.抽象方法用abstract关键字修饰
+	3.继承至抽象类的类如果想要实例化对象就必须实现父类的抽象方法
+	4.抽象类不能实例化对象
+	5.子类必须覆写全部的抽象方法
+③示例
+	class abstract Father {
+		public abstract void func();
+	};
+	class Son {
+		public void func(){	// 实现抽象方法		
+		}
+	}
+
+	
+	
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【四】接口	// 跟抽象类类似, 起"模板作用", 子类可以继承至多个接口
+ 
+①格式
+	interface 接口名称 {
+		全局常量;	// 默认为final变量, 常量.
+		抽象方法;	// 默认为抽象方法, 继承的子类必须实现这些方法.
+	}
+②作用
+	1.突破单继承限制
+③注意
+	1.可以继承类的同时继承多个接口。 
+	2.子类必须覆写全部的抽象方法， 否则会出错
+	3.之类不可以修改接口的变量（出错）， 因为接口中的变量是常量
+	
+④示例
+	interface A {
+		public static int i= 10;
+		public abstract int getNum();
+	}
+	interface B {
+		public static String name = "interface b";
+		public abstract String getName();
+	}
+	class Son implements A,B {
+		public  int getNum() {
+		}
+		public  String getName() {
+		}
+	}
+	
+
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+					第六章 多态性
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+【一】方法的重载与覆写
+①重载(overload): 定义多个同名方法, 其参数类型、个数不同。
+②覆写override：子类里实现跟父类同样的方法
+	注意: 与C++不同的是, C++必须传递子类的引用或者指针才能实现多态性（虚函数表）。
+		  而java可以直接传递子类对象就可实现多态性
+	举例:
+	class Father {
+		public void func () {
+			System.out.println("Father");
+		}
+	};
+	class Son extends Father{
+		public void func(){	
+			System.out.println("Son");
+		}
+	}
+	public class Oop {
+		public static void main(String args[]) {
+			Father f = new Father();
+			Son s = new Son();
+			print(f);	// "Father"
+			print(s);	// "Son"
+		
+		}
+		public static void print(Father f) {
+			f.func();
+		}
+	}
+	
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+
+【二】对象的多态性
+①向上转换
+	Son son = new Son();  Father f = son;
+	f.func()只能调用被子类覆写的方法, 不能调用只在子类中定义的方法
+
+②向下转换
+	Father f = new Son(); Son son = (Son)f;
+	在进行对象的向下转换前,必须发生对象的向上转换
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+③instanceof:用来判断一个对象是不是某个类的实例 
+1.注意: 对于父类的判断必须放在最后面, 否则子类对象会被认为是父类对象
+	class Father {
+		public void drink() {
+			system.out.println("drink");
+		}
+	}
+	class Son extends Father{
+		public void playGame() {
+			system.out.println("playGame");
+		}
+	}
+	class Daughter extends Father{
+		public void dance() {
+			system.out.println("dance");
+		}
+	}
+	public class Test{
+		public static void main(String args[]){
+			Father f;
+			Son s;
+			Daughter d;
+			f.printAction();	//	"drink"
+			s.printAction();	//	"playGame"
+			d.printAction();	//	"dance"
+		}
+		public static void printAction(Father f){
+			if (f instaceof Son) {
+				Son s = (Son)f;
+				s.playGame();
+			}
+			else if (f instaceof Daughter) {
+				Daughter d = (Daughter)f;
+				d.dance();
+			}
+			else if (f instaceof Father) {
+				f.drink();	// 注意: 对于父类的判断必须放在最后面, 否则子类对象会被认为是父类对象
+			}
+		}
+	}
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+					第四章 异常
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+java异常分布图:
+
+		  --Error...(及子节点)
+		 | (Java虚拟机本身的错误: 不处理)	
+Throwable|							-EopException			
+(必须处理)|			  --IOException|  (必须处理)
+		 |			 | 	(必须处理)	-FileNotFoundException
+		  --Exception|				  (必须处理)
+		  (必须处理)  |	
+					  --RuntimeException...(及子节点)
+						(运行异常):可以不处理(后果是程序退出)
+						
+注意: 1.自己需要处理的错误如果不处理连编译不通过		
+	  2.捕捉父类的异常时, 所有子类的异常都会被父类捕捉到。	
+	  3.try或者catch块中有return或throw语句， 会先执行finally块，再返回来执行return或者throw语句
+		--》所以：当try或者catch语句中有throw语句时， 不要在finally语句中中执行return，否则先执行return后， throw语句并没有执行。
+	  4.对于不可查异常（RuntimeException及其子类），就算我们没有在函数名中声明throws关键字，发生异常时系统也会抛出异常给调用者
+	  5.对于可查异常(非RuntimeException及其子类)必须处理或者抛出让调用者处理
+
+
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【一】必须处理的
+①自己处理的异常
+	[1]作用: 
+		1.如果不处理运行的异常,那么程序会崩溃
+		2.如果处理了异常, 就算程序出错,我们处理了异常后程序还是会继续往下跑.
+	[2]语法
+		try {
+			// 可能产生异常的代码
+		} catch(异常类对象形参) {
+			// 异常处理代码
+		}finally {
+			// 不管是否产生异常都会执行这些代码
+		}
+		
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+②让别人处理的异常
+	public class Test{
+		public static void main(String) {
+			try {
+				div(6/0);
+			} catch(ArithmeticException e) {
+				// 如果捕获到抛出的算数异常,将执行这个代码块
+			} catch(NumberFormarException e) {
+			
+			} catch(RuntimeException) {
+			
+			}finally {
+			
+				// 无论是否捕捉到异常,都将执行里面的代码块.
+			}
+		}
+	}
+	public static void func(int m, int n) ArithmeticException{
+		return m /n;	// 如果n=0将抛出算数异常给调用者
+	}
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+②手动抛出异常
+	[1]语法
+		throw (异常对象)
+	[2]作用
+		可以在被调用函数中处理异常后再手动抛出一个异常,让调用者也处理异常.
+	[3]举例: 让调用者和被调用者同时处理异常
+	public class Test{
+		public static void main(String) {
+			try {
+				div(6/0);
+			} catch(ArithmeticException e) {
+				// 如果捕获到抛出的算数异常,将执行这个代码块
+			}finally {
+				// 无论是否捕捉到异常,都将执行里面的代码块.
+			}
+		}
+	}
+	public static void func(int m, int n) ArithmeticException{
+			try {
+				return m /n;	// 如果n=0将抛出算数异常给调用者
+			} catch(ArithmeticException e) {
+				// 如果捕获到抛出的算数异常,将执行这个代码块
+				1.处理异常
+				2.抛出异常, 让调用者也捕获到该异常
+				throw e;	
+			}finally {
+				// 无论是否捕捉到异常,都将执行里面的代码块.
+			}
+	}
+【二】可以不处理的
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+					第五章 包
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+【一】package
+	①包实际上是一个文件夹(可以包含多级子目录)
+	②格式 package包名称, 子包名称;
+		例: package a.b.c.d;
+	③编译命令:java -d <dir> <file.java> // 表示在<dir>目录下生成包
+	④作用: 解决不同路径下同名冲突问题
+	⑤示例:
+		// Pack.java
+			package a.b.c.d;	// 声明Pack类属于包a.b.c.d
+			public class Pack{
+				public static void main(String args[]){
+					System.out.println("func");
+				}
+			}
+		// 编译
+		javac -d . Pack.java	// 在当前目录下生成包a/b/c/d/Pack.class
+		// 执行
+		java a.b.c.d.Pack
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】import
+	1.使用不同包的类时需要import
+	2.public class可以被外包访问; class只能在本包中访问
+	3.格式:
+		import 包名称.子包名称.类名称 // 手工导入某个类
+		import 包名称.子包名称.*		 // 由JVM自动加载所需要的类
+	4.执行	
+		包名称.子包名称.类名称.函数名(参数...)
+	5.示例
+		// lisi/Print.java
+			package a.b.c.lisi;
+			public class Print{
+				public static void main(String args[]){
+				}
+				public static void printInfo(){
+					System.out.println("i'm lisi");
+				}
+			}
+			编译: javac -d . lisi/Print.java
+		// zhanshan/Print.java
+			package a.b.c.zhanshan;
+			public class Print{
+				public static void main(String args[]){
+				}
+				public static void printInfo(){
+					System.out.println("i'm zhanshan");
+				}
+			}
+			编译: javac -d . zhanshan/Print.java
+		// Pack.java
+			import a.b.c.lisi.*;		// 加载包里面的所有类
+			import a.b.c.zhanshan.*;	// 加载包里面的所有类
+			public class Pack{
+				public static void main(String args[]){
+					a.b.c.lisi.Print.printInfo();	// 调用包中的函数
+					a.b.c.zhanshan.Print.printInfo();
+				}
+			}
+			编译: javac Pack.java	// 当前目录下生成Pack.class
+			执行: java Pack
+			结果: 	i'm lisi
+					i'm zhanshan
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【三】jar
+	0.作用: 将包压缩成jar文件
+	1.生成.jar压缩包 
+		jar -cvf <file.jar> <dir>	// 使用【二】中的例子作为例子
+		例: jar -cvf mypack.jar a/ 
+	
+	
+	2.查看: jar -tvf <file.jar>
+	3.解压: tar -xvf <file.jar>
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【四】CLASSPATH命令		// 指定.jar(压缩包的位置)
+	1.指定编译时查找源码的目录
+	2.指定运行时"查找.class文件的目录"或"jar文件"
+	3.设置方法
+		export CLASSPATH=<dir1>:dir2:...:<file1.jar>:<file2.jar>:...
+	4.重新编译, 然后执行
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+						第六章 权限
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+【一】类权限
+①概述
+	1.class类生成的包, 只能被本包中的类访问。
+		举例：
+		//Math.java
+			package a;		// 当前路径下生成包a
+			class Math{
+			}
+		编译: javac -d . Math.java // 在当前目录下生成包a	
+		
+		//Pack.java
+		package b;			// 当前路径下生成包b
+		import a.*;
+		class Pack{
+			void main(String args[]){
+				Math m = new Math();	// 错误,当前文件被编译到包b中， 而class Math只能被包a中的类调用 
+			}
+		}									↑
+		编译: javac -d . Math.java 		// 错误
+	---------------------------------------------------------------------	
+	1.public class类生成的包, 既能被本包中的类访问, 也能被本包之外的包中的类访问
+		举例：
+		//Math.java
+			public package a;		// 当前路径下生成包a
+			class Math{
+			}
+		编译: javac -d . Math.java // 在当前目录下生成包a	
+		
+		//Pack.java
+		package b;			// 当前路径下生成包b
+		import a.*;
+		class Pack{
+			void main(String args[]){
+				Math m = new Math();	// 错误,当前文件被编译到包b中， 而class Math只能被包a中的类调用 
+			}
+		}									↑
+		编译: javac -d . Math.java 		// 错误
+		
+		
+②类的权限	
+	1.class 只能由public修饰, 如果没有public则为默认修饰符
+	2.默认的类class可以在本包中访问
+	3.被声明为public的类可以在任何地方被访问
+	4.一个文件中最多有一个类被声明为public(这个类的名称和文件名相同)
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】类成员权限
+	private			本类可访问
+	--------------------------------------------------------------------------------------
+	default			本包可访问
+	--------------------------------------------------------------------------------------
+	protected		本包、其他包的子类可访问
+	--------------------------------------------------------------------------------------
+	public			所有
+	--------------------------------------------------------------------------------------
+说明: 
+	1.类中的private成员只能在本类中访问
+	2.类中的default成员可以在本包中被访问
+	3.类中的protect成员可以在非本包的子类中被访问
+	4.被声明为public的成员在任何地方都可访问
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+					第七章 内部类、静态内部类、匿名内部类
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+【一】内部类
+①注意:
+	1.内部类可以直接访问外部类的私有属性
+	2.必须先创建外部类,然后通过外部类创建内部类。
+②示例：
+	class Out{
+		private int a = 5;
+		class Inner{
+			public void print(){
+				System.out.println("a="+a);
+			}
+		}
+	}
+	public public Test{
+		public static void main(String args[])
+		Out = new out();
+		out.Inner inner = new Inner();
+		inner.print();
+	}
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】静态内部类
+①注意
+	1.静态内部类可以不通过外部类直接实例化。
+	2.静态内部类只能使用外部类的静态变量。(因为外部类的非静态成员在内部类创建前并没有创建, 所以不能使用)
+②举例
+	class Out{
+		private static int a = 5;
+		static class Inner{
+			public void print(){
+				System.out.println("a="+a);
+			}
+		}
+	}
+	public public Test{
+		public static void main(String args[])
+			Out.Inner inner = new Inner();
+			inner.print();
+	}
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】匿名内部类
+// 在类里面将接口实现为类
+interface Inter {
+	public void test();
+}
+public class Anony {
+	public static void main (String args){
+		print(new Inter() { // 接口不能创建对象, 因为需要实现接口里面的方法.
+			public void test(){
+				System.out.println("test");
+			}
+		});
+	}
+	public static void print(Inter in){
+		in.test();
+	}
+}
+
+
+	
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+					第五章 JNI(java Native Interface)
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+【一】Java调用C:
+①加载C库
+	System.loadLibrary("name")	// libname.so
+②建立Java函数名到C库函数名的"隐式映射"关系
+	1.类a.b.c.d.JNIDemo要调用hello函数
+	2.c语言中要实现Java_a_b_c_d_JNIDemo_hello
+	3.可以用工具生成头文件
+		1.javac -d . JNIDemo.java
+		2.javah -jni a.b.c.d.JNIDemo
+	4.例子
+	-----------------------------------------------------
+	
+③建立Java函数名到C库函数名的"显示映射"关系
+	JNI_OnLoad: 加载c库时就会调用这个函数。
+	RegisterNatives： 
+		1.定义一个映射数组JniNativeMethod[]
+		2.注册这个数组
+			(*env)->RegisterNatives(JNIEnv *env, jclass cls, const JNINativeMethod *methods, jint nMethods)
+		3.简单例子
+	-----------------------------------------------------
+④注意:
+	C函数比Java里的声明2个参数:(JNIEnv *env, jclass cls)
+		1.env提供一些辅助函数, 后面有例子	
+		2.cls是对Java类或实例的引用
+			1.如果是static方法, 则cls是对Java类的引用.
+			2.否则, cls是对类的实例化对象的引用。
+	
+⑤java和C库传递参数
+	1.传递基本数据类型
+		直接使用直接返回
+	2.传递字符串(jni.pdf P39)
+	3.传递数组(jni.pdf P48)
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】C调用Java(jni.pdf P97)
+步骤:
+	1.创建虚拟机
+	2.获得class
+	3.实例化对象
+		1.对于静态方法, 不需要实例化对象
+		2.也是通过调用Java方法实现
+	4.调用Java方法
+		1.获得方法ID
+		2.构造参数
+		3.调用方法
+	5.其他
+		1.设置属性
+			1.获得属性ID
+			2.设置属性
+			3.读取属性
+			
+
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+// 参考jni.pdf P97
+①java怎么访问C/C++写的库?
+	1.加载C库
+		System.loadLibrary
+	2.(C/C++中建立映射关系): 
+				  映射	
+				--------
+		java函数		  C/C++库		
+	3.调用函数
+②JNI版本 1.1-1.4
+③C/C++库函数映射到java类里面声明的C/C++库函数
+	// java中加载(C/C++)库时(System.loadLibrary()), 库中的这个函数被调用
+	
+	----------------------------------------------------------------------------------------
+	//Native.c
+	#include <jni.h>	// /usr/lib/jvm/java-8-openjdk-amd64/include/jni.h
+	void c_hello()
+	{
+		printf("Hello, world!\n");
+	}
+
+	
+	/*
+	typedef struct {
+		char *name;			// java里调用的函数名
+		char *signative;	// JNI字段描述符,用来表示Java里调用的函数的参数和返回值类型
+		void *fnPtr;		// C语言实现的本地函数指针
+	}JNINativeMethod;
+	*/
+	// 可以有多个函数的映射
+	static const JNINativeMethod methods[] = {
+		{	"hello",
+			"()V",		// 表示没有参数, 返回值为void(大写的V)	
+			(void *)c_hello
+		}
+	}
+	
+	JNIEXPORT jint JNICALL
+	JNI_OnLoad(JavaVM *jvm, void *reserved)
+	{
+		JNIEnv *env;
+		jclass cls;
+		// 获得一个运行环境
+		if ((*jvm)->GetEnv(jvm, (void **)&env, JNI_VERSION_1_4)) {
+			return JNI_ERR; /* JNI version not supported */
+		}
+		// 查找声明了C/C++库函数的类(目的地)
+		cls = (*env)->FindClass(env, "JNIDemo");  // 假如javaJNIDemo类里面声明了C/C++库函数	
+			if (cls == NULL) {
+			return JNI_ERR;
+		}
+		
+		// 将方法注册到env环境中的env类里面
+		if((*env)->RegisterNatives(env, cls, methods, 1) < 0)	// 数组中只映射了一项
+			return JNI_ERR;
+		return JNI_VERSION_1_4;
+	}
+	-------------------------------------------------------------------------------------------------
+	// JNIDemo.java
+	public class JNIDemo {
+		static {	// 放在静态代码块,仅仅执行一次
+			/* 1.加载库 */
+			System.loadLibrary("native")	// 对于linux是去找库: libnative.so, 导致库中的JNI_OnLoad函数被调用
+		}
+		// 声明用C/C++库中的函数hello(), native表示本地(说明是C/C++函数)。
+		// static表示不用创建对象就可以调用类中的方法， 否则先要在main中创建JNIDemo对象，然后通过这个对象来调用hello（）。
+		public native static void hello();
+		public static void main(String args[]){
+			/* 2.建立映射关系(在c语言中进行) */
+			
+			/* 3.调用库中的函数 */
+			hello();
+		}
+	}
+	
+④编译
+	javac JNIDemo.java	
+	gcc -I/usr/lib/jvm/java-8-openjdk-amd64/include/ -fPIC -shared -o libnative.so native.c
+⑤执行
+	1.设置环境变量
+		export LD_LIBRARY_PATH=.
+	2.java JNIDemo	
+示例 
+
+
+
+
+
+
+
+
+
+	

@@ -1,0 +1,97 @@
+(1)引入
+	1.用于管理大型的工程项目
+	2.复杂的Makefile基本上都是使用autotools这些工具链自动生成的
+	3.弄清楚Makefile的基本语法
+	4.总体原则
+		目标:依赖
+		Tab	规则
+(2)	工具
+	arm-linux-gcc		编译c文件
+	arm-linux-g++		编译c++
+	arm-linux-ar		生成静态库
+	arm-linux-ld		连接
+	arm-linux-gdb		调试
+	arm-linux-objdump	生成反汇编
+	arm-linux-readelf	获取可执行程序的栈,堆,等信息
+			
+			
+(3)符号	
+	①等于符号
+		= 延时赋值
+		:= 是覆盖之前的值
+		?= 是如果没有被赋值过就赋予等号后面的值
+		+= 是添加等号后面的值	
+		例:1.
+			x = foo
+			y = $(x) bar	// xyz bar
+			x = xyz
+		   2.	
+			x := foo
+			y := $(x) bar   // foo bar
+			x := xyz			
+(4)通配符的使用
+	“wildcard”: 扩展通配符
+	 "patsubst" ：替换通配符
+	 "notdir"   ： 去除路径
+	1.在Makefile规则中，通配符会被自动展开。但在变量的定义和函数引用时，通配符将失效。
+	2.若想在函数中使用通配符需要使用函数“wildcard”来扩展通配符
+	3.它的用法是：$(wildcard PATTERN...) 。
+		//在Makefile中，它被展开为已经存在的、使用空格分开的、匹配此模式的所有文件列表。
+	4.一般我们可以使用“$(wildcard *.c)”来获取工作目录下的所有的.c文件列表。
+	5.复杂一些用法；可以使用“$(patsubst %.c,%.o,$(wildcard *.c))”
+		//首先使用“wildcard”函数获取工作目录下的.c文件列表；之后将列表中所有文件名的后缀.c替换为.o。
+	示例:
+		1.建立一个测试目录，在测试目录下建立一个名为sub的子目录在test下，建立a.c和b.c2个文件，
+			在sub目录下，建立sa.c和sb.c2 个文件
+
+		2.建立一个简单的Makefile
+			src=$(wildcard *.c ./sub/*.c)
+			dir=$(notdir $(src))
+			obj=$(patsubst %.c,%.o,$(dir) )
+			all:
+			 @echo $(src)
+			 @echo $(dir)
+			 @echo $(obj)
+			 @echo "end"
+		3.执行结果分析：
+			第一行输出：a.c b.c ./sub/sa.c ./sub/sb.c
+				// wildcard把 指定目录 ./ 和 ./sub/ 下的所有后缀是c的文件全部展开。
+			第二行输出：a.c b.c sa.c sb.c
+				// notdir把展开的文件去除掉路径信息
+			第三行输出：	a.o b.o sa.o sb.o
+				// 1.在$(patsubst %.c,%.o,$(dir) )中，patsubst把$(dir)中的变量符合后缀是.c的全部替换成.o，任何输出。
+					或者可以使用obj=$(dir:%.c=%.o)效果也是一样的。
+				// 2.这里用到makefile里的替换引用规则，即用您指定的变量替换另一个变量。
+					它的标准格式是: $(var:a=b) 或 ${var:a=b}, 它的含义是把变量var中的每一个值结尾用b替换掉a。
+				// 3.如果还有子目录，比如子目录为inc，则再增加一个wildcard函数，象这样：
+					SRC = $(wildcard *.c) $(wildcard inc/*.c)
+	
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+			
+			 

@@ -1,0 +1,8 @@
+ffmpeg + android
+讲解内容
+1.如何编译Android平台的ffmpeg库, 使其指出neon(协处理器)和硬解码,并测试性能
+
+
+
+
+	

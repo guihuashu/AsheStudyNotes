@@ -1,0 +1,80 @@
+with： 							用， 伴随（并且）， 带有
+A provides B for use with C		// A提供了一个和C一起使用的B
+Alternatively： 				或者
+sorting ： 						排序、归类
+do so after a					A： 在做A之后执行此操作
+a interfere with b：			a 干扰b, 干预
+populated： 					填充（populate居住于）
+simplest 	//最简单
+A to B		// A向B
+sophisticated ： 复杂的，老练的
+existing ： 现有的
+particular： 特定的
+contains only 	// 仅仅包含
+fully contained  // 完全被包含
+A whose B		 // B中的A
+Drop			// 放置
+deprecated		// 弃用
+optimization 	// 优化
+purposes 		// 目的
+This is used for	// 这仅仅用于
+cycle 			// 循环
+through 		// 通过
+separate 		// 独立
+components		// 组件
+appearance 		// 外观
+meta data		// 元数据
+associated 		// 关联
+represents 		// 表示, 代表
+hold 			// 包含
+several pieces of information,	// 多条信息
+appropriately	// 适当
+classic			// 金典的
+approach		// 途径,方法
+Tooltips		// 工具提示
+tips			// 提示
+delegate		// 委托,代表
+implemented		// 实现
+further 		// 进一步
+image below		// 下图
+exclusive 		// 独占
+non-exclusive	// 非独占
+query 			// 查询.询问
+whether or not	// 是或者不是
+In addition to	// 除了, 另外
+toggle			// 切换
+optionally 		// 可选择的
+shortcut key	// 快捷键
+ampersand		// &符号
+preferred character	// 首选字符
+preceding A		// 在A之前
+indication 		// 指示
+reassure 		// 保证
+concept 		// 概念
+steps			// 步数
+rewound （rewind）	// 倒回
+indicator 		// 指示符
+Obsolete 		// 过时
+Contents		// 内容
+forcibly 		// 强制
+schedule		// 调度
+Constant		// 常量
+invoked 		// 调用
+compatibility	// 兼容性
+intended to		// 打算, 目的
+implemented		// 实现
+lookup			// 查找 = look up	
+mechanisms 		// 机制
+arbitrary		// 任意的		
+encapsulates 	// 封装
+
+
+
+
+
+
+
+
+
+
+

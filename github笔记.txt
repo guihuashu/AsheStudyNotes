@@ -1,0 +1,52 @@
+0.先在图像界面(github desktop)上登录用户
+1.查看是否已经连接到服务器:
+	ssh -T git@github.com
+2.将本地目录构建为一个git项目
+	打开git shell
+	cd 本地目录
+	git init
+3.在云端创建新仓库
+	选中Repositories->new
+	URl是仓库的唯一标识 // git@github.com:guihuashu/Repositories_1.git 
+4.本地项目--远程项目关联
+	git remote add origin git@ssh名
+5.第一次发布项目(本地-->远程)
+	git add .				 // 文件-->暂存区 
+	git commit -m "注释内容" // 暂存区-->本地分支(默认为master)
+	git push -u origin master
+6.第一次下载项目(远程-->本地)
+	git clone git@ssh名
+	
+7.更新(远程-->本地)
+	git pull
+
+8.提交(本地-->远程)
+	方法一: 
+		git add .
+		git commit -m "注释" 
+		git push origin master
+	方法二: 
+		在客户端中点击提交
+----------------------------------------------------------------
+恢复到历史提交
+	方法一: 
+		cd 项目目录
+		git reset --hard	提交号
+	方法二: 
+		在github网站中找到历史提交,然后下载zip文件
+	
+----------------------------------------------------------------
+团队协作开发
+仓库-->settings-->collaborators
+输入要合作的用户邮箱
+发送邀请链接,合作伙伴打开该链接,接受邀请, 克隆项目
+合作开发:
+	
+
+
+
+
+
+
+
+

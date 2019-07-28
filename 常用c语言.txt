@@ -1,0 +1,974 @@
+
+1.功 能: 在串中查找指定字符串的第一次出现 
+	用 法: char *strstr(char *str1, char *str2); 
+	说明：返回指向第一次出现str2位置的指针，如果没找到则返回NULL
+#################################################################
+2.字符串存储
+	C系统在用字符数组存储字符串常量时会自动加一个‘ \ 0 ’ 作为结束符。
+	例如“C program”共有9个字符。字符串是存放在一维数组中的，
+	在数组中他占10个字节，最后一个字节‘\0'是系统自动加上的
+#################################################################
+3.关于strlen和sizeof
+	char str[255];
+	strcpy(str, "123456");
+	qDebug()<<strlen(str)<<sizeof(str); // out<<6<<255
+#################################################################
+4.sleep（2）: 让当前进程挂起2s
+#################################################################
+5.printf显示
+	1.先输出到系统IO缓冲区
+	2.遇到回车换行, 或者遇到能够冲刷缓冲区的函数,就会将缓冲区的内容
+	  冲刷到串口(或其他设备)上
+6.while(getchar())	// 清空缓冲区,也可用终端冲刷函数
+#################################################################
+7.判断一个文件/文件夹是否存在, 或者一个文件的权限
+	int access(const char *pathname, int mode);	
+	mode：（F_OK） 只判断是否存在
+		  （R_OK） 判断读权限
+		   (W_OK） 判断写权限
+		  （X_OK） 判断执行权限
+#################################################################
+8.读写的字节数:
+	char buf[50];
+	ret = write(fd, "123", 50);	// ret = 50
+==>	ret = read(fd, buf, 50);	// ret = 50, buf = "123"
+#################################################################
+9.perror(s) 用来将上一个函数发生错误的原因输出到标准设备(stderr)。
+	参数 s 所指的字符串会先打印出，后面再加上错误原因字符串。
+#################################################################
+10.dma_addr_t: 物理地址
+   cpu_addr_t: 虚拟地址
+#################################################################
+11.关于open的选项
+	IPC操作时IPC_CREAT和IPC_EXCL选项的说明..
+	当只有IPC_CREAT选项打开时:	不管是否已存在该块共享内存，则都返回该共享内存的ID，若不存在则创建共享内存
+	当只有IPC_EXCL选项打开时 :  不管有没有该快共享内存，shmget()都返回-1
+	所以当IPC_CREAT | IPC_EXCL时, 如果没有该块共享内存，则创建，并返回共享内存ID。
+						若已有该块共享内存，则返回-1
+#################################################################
+12.死循环方式
+	死循环1, for(;;){}
+	死循环2， while（1）{}
+	死循环3， do {} while(1);	
+#################################################################
+O_CREAT | O_EXCL
+原子操作: 如果这个文件不存在就创建他, 如果这个文件已经存在就返回错误
+
+#################################################################
+typedef的使用(为已有的类型增加一个别名)
+	1.typedef int INT;
+	2.typedef char CHAR[20]; ==>CHAR是字符数组类型
+		CHAR C1; <==> char C1[20];
+	3.typedef int (*func)(char,char); ==> func是函数指针类型(返回值为 int, 参数为两个 char)
+		func f1; <==> 定义一个函数指针: int (*f1)(char,char)	
+#################################################################
+linux signal函数详解
+写法一:
+typedef void (*sighandler_t)(int);
+    sighandler_t signal(int signum, sighandler_t handler);
+	返回值: sighandler_t类型的函数指针
+	形参:   int, sighandler_t类型函数指针
+		void (*signal(int signum, sighandler_t handler))(int);
+	==> void (*signal(int signum, void (*handler)(int)))(int);
+写法二:
+void ( *signal( int sig, void (* handler)( int )))( int );
+	// 这儿看不出返回值类型, 进行简化
+	typedef void (*sighandler_t)(int)	// sighandler_t是void(*)(int)类型的函数指针的别名
+	void ( *signal( int sig, void (* handler)( int )))( int );
+	// 定义一个名为signal( int sig, void (* handler)( int )))的void(*)(int)类型函数指针
+	==> sighandler_t signal( int sig, void (* handler)( int ))) 
+	==> sighandler_t signal( int sig, sighandler_t handler) 
+	==> 	返回值: sighandler_t类型的函数指针
+			形参:   int, sighandler_t类型函数指针
+############################################################################################################
+字符串与整形相互转换
+	unsigned long strtoul(const char *nptr,char **endptr,int base);
+	int	atoi (const char *nptr)	/* Convert a string to an int.  */
+	itoa()：将整型值转换为字符串。
+	ltoa()：将长整型值转换为字符串。
+	ultoa()：将无符号长整型值转换为字符串。
+	gcvt()：将浮点型数转换为字符串，取四舍五入。
+	ecvt()：将双精度浮点型值转换为字符串，转换结果中不包含十进制小数点。
+	fcvt()：指定位数为转换精度，其余同ecvt()。
+	sprintf():
+	
+#################################################################################################
+解析字符串: strsep函数()
+	char *strsep(char **stringp, const char *delim);
+		stringp: 存储"字符串buf地址"的地址	// 二级指针
+		delim  : 被拆分的分隔符
+		返回值:
+			strsep返回第一个delim前的字符串, 然后stringp会更改为第一个delim之后的字符串
+		注意:
+			如果stringp是字符串末尾的最后一个字段, 那么它显然不包含分隔字符串delim, 这时
+			strsep调用会返回stringp字符串, 将后将stringp设为NULL。
+	举例：
+		int main()
+		{
+			char buf[]="name1:name2:name3";
+			char *str = buf;
+			char *token;
+			int i=0;
+			
+			while(NULL != (token = strsep(&str, ":")))
+			{
+				switch(++i) {
+					case 1: 	// 第一个字段
+						printf("token = %s\n", token);	// name1
+						printf("str = %s\n", str);		// name2:name3
+						break;
+					case 2: 	// 第一个字段
+						printf("token = %s\n", token);	// name2
+						printf("str = %s\n", str);		// name3
+						break;
+					case 3: 	// 第一个字段
+						printf("token = %s\n", token);	// name3
+						printf("str = %s\n", str);		// (null)
+						break;
+				}
+			}
+		}
+		
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+############################################################################################################
+#define list_entry(ptr, type, member) \
+	  ((type *) ((char *) (ptr) - (unsigned long) (&((type *) 0)->member)))
+	目的: // 根据节点ptr的地址,得到其type结构体的首地址, member是type结构体中的节点变量名
+			根据节点ptr, 找到ptr所在的type结构指针
+		ptr: 	list_t节点指针, 
+		type: 	要查找的指针类型
+		member: member是type结构体中定义的list_t类型变量名
+	分析:
+		(char *) (ptr)就是链表中的一个节点:&(t.member)
+		(unsigned long)&((type *) 0)->member): 是member成员到type结构首地址之间的距离
+		二者相减 = type变量的首地址
+
+	使用例子:
+		static LIST_HEAD (head);	
+		typedef struct T {
+			int a;	
+			list_t member;
+		}type
+		int main();
+		{
+			T t;
+			list_add(&t.member, &head);
+		}
+		ptr = head->next;	// =&(t.member) 链表中的节点
+		struct T *p = list_entry(ptr, struct T, member) // = &t
+	
+#################################################################
+#define list_for_each(pos, head) \
+  for (pos = (head)->next; pos != (head); pos = pos->next)
+目的: 
+  它实际上是一个for循环，从第一个节点开始(链表头不算做节点)，pos = 第1个节点指针; 然后又向后移动一个节点,
+	pos = 第2个节点指针...;直到到达最后一个节点为止
+其他:
+list_for_each_prev			// 由后向前遍历
+list_for_each_prev_safe		// 安全的遍历(遍历过程中要删除节点是使用)
+	其机制是我们多传入一个struct list_t的指针n，用于指向pos的下一个节点，
+	以保证我们在删除pos指向的节点时，仍能继续遍历链表的剩余节点。
+	试想一下: 如果使用#define list_for_each(pos, head) \
+			for (pos = (head)->next; pos != (head); pos = pos->next)
+            来遍历链表, 每遍历一次就删除当前节点, 那么pos = pos->next就会出错
+举例:
+	static LIST_HEAD (head);	
+	typedef struct T
+	{	char *name;
+		list_t member;	// pre, next
+	}type;
+	int main(int argc, char **argv)
+	{
+		type a,b,c,d;
+		list_t *ptr;	// 节点指针
+		type *t;
+		
+		a.name = "a";
+		b.name = "b";
+		c.name = "c";
+		d.name = "d";
+		list_add(&a.member, &head); // 紧挨着链表头插入新节点
+		list_add(&b.member, &head); // 紧挨着链表头插入新节点
+		list_add(&c.member, &head); // 紧挨着链表头插入新节点
+		list_add(&d.member, &head); // 紧挨着链表头插入新节点
+		
+		list_for_each(ptr, &head)
+		{	t = list_entry(ptr, type, member);
+			printf("%s\n", t->name);
+
+		}
+		return 0;
+	}
+	/*
+		执行结果:
+	book@gui_hua_shu:~/test$ ./a.out
+		d
+		c
+		b
+		a
+	*/
+#################################################################
+拼接两个链表:
+	/* 拼接两个链表:
+		1.如果新增的链表只有一个链表头就不做任何处理(因为链表头不包含数据)
+		2.	(head 	 2) 	+	(add  4  5)	
+			==> (head 	(5 	 6)   2   3)		// 抛弃链表头add
+	*/
+	/* Join two lists.  */
+	static inline void
+	list_splice (list_t *add, list_t *head)
+	{
+	  /* Do nothing if the list which gets added is empty.  */
+	  if (add != add->next)
+		{
+		  add->next->prev = head;		// 5的上一项是head
+		  add->prev->next = head->next; // 6的下一项是2
+		  head->next->prev = add->prev; // 2的上一项是6
+		  head->next = add->next;		// head的下一项是5
+		}
+	}
+举例:
+	static LIST_HEAD (head);	
+	static LIST_HEAD (head2);	
+	typedef struct T
+	{	char *name;
+		list_t member;	// pre, next
+	}type;
+
+	int main(int argc, char **argv)
+	{
+		type a,b,c,d;
+		list_t *ptr;	// 节点指针
+		type *t;
+		
+		a.name = "a";
+		b.name = "b";
+		c.name = "c";
+		d.name = "d";
+		list_add(&a.member, &head); // 紧挨着链表头插入新节点
+		list_add(&b.member, &head); // 紧挨着链表头插入新节点
+		
+		list_add(&c.member, &head2); // 紧挨着链表头插入新节点
+		list_add(&d.member, &head2); // 紧挨着链表头插入新节点
+
+		list_splice(&head2, &head);
+		list_for_each_prev(ptr, &head)
+		//for (pos = (head)->prev; pos != (head); pos = pos->prev)
+		{	t = list_entry(ptr, type, member);
+			printf("%s\n", t->name);
+			list_del(ptr);
+		}
+		return 0;
+	}
+	结果: 
+	
+#################################################################
+终端字体打印特效  (设置封装)
+	0.使用方法：
+		printf("字体属性""字体背景色")
+	1.* \e 可用 \033 代替， \e表示 escape（转义字符），而 \033是 escape 的八进制值 *
+	
+	2.常用的ANSI控制码如下（有些不支持）：
+		1.字体属性
+			\e[0m 关闭所有属性 
+			\e[1m 高亮
+			\e[2m 亮度减半
+			\e[3m 斜体
+			\e[4m 下划线 
+			\e[5m 闪烁 
+			\e[6m 快闪
+			\e[7m 反显 
+			\e[8m 消隐 
+			\e[9m 中间一道横线
+			\e[10m-19m 关于字体的
+			\e[21m-29m 基本与1-9正好相反
+			\e[38m  打开下划线,设置默认前景色 
+			\e[39m  关闭下划线,设置默认前景色 
+		2.字体颜色(前景色)
+			30m	黑
+			31m	红
+			32m	绿
+			33m	黄
+			34m	蓝色
+			35m	紫色
+			36m	深绿
+			37m	白色
+		3.背景色
+			\e[40; 黑色背景 
+			\e[41; 红色背景 
+			\e[42; 绿色背景 
+			\e[43; 棕色背景 
+			\e[44; 蓝色背景 
+			\e[45; 品红背景 
+			\e[46; 孔雀蓝背景 
+			\e[47; 白色背景 
+		4.光标操作
+			\e[nA 光标上移n行 
+			\e[nB 光标下移n行 
+			\e[nC 光标右移n行 
+			\e[nD 光标左移n行 
+			\e[y;xH设置光标位置 
+			\e[2J 清屏 
+			\e[K 清除从光标到行尾的内容 
+			\e[s 保存光标位置 
+			\e[u 恢复光标位置 
+			\e[?25l 隐藏光标 
+			\e[?25h 显示光标	
+		5.其他			
+			48 不知道什么东西
+			49 设置默认背景色
+			50-89 没用
+			90-109 又是设置前景背景的，比之前的颜色浅
+	3.封装:
+		#include <stdio.h>
+		// 字体选项设置
+		#define CLOSE_ATTR		 "\e[0m" //关闭所有属性 
+		#define HIGHLIGHT 		 "\e[1m" //高亮
+		#define HEIGHT_HALVING   "\e[2m" //亮度减半
+		#define ITALIC 			 "\e[3m" //斜体
+		#define UNDERLINE 		 "\e[4m" //下划线 
+		#define FLICKER  		 "\e[5m" //闪烁 
+		#define FLASH  			 "\e[6m" //快闪
+		#define REVERSE_DISPLAY  "\e[7m" //反显 
+		#define BLANK 		     "\e[8m" //消隐 
+		#define STRICKOUT		 "\e[9m" //删除线
+
+		// 背景色
+		#define BG_BLACK		 "\e[40;"    // 黑
+		#define BG_RED			 "\e[41;"    // 红
+		#define BG_GREEN		 "\e[42;"    // 绿
+		#define BG_BROWN 		 "\e[43;"    // 棕
+		#define BG_BLUE			 "\e[44;"    // 蓝
+		#define BG_PINKISH_RED	 "\e[45;"    // 品红
+		#define BG_PEACOCK_BLUE  "\e[46;"    // 孔雀蓝
+		#define BG_WHITE		 "\e[47;"    // 白色
+
+		// 字体颜色(前景色)
+		#define FG_BLACK		 "30m"     // 黑
+		#define FG_RED			 "31m"     // 红
+		#define FG_GREEN		 "32m"     // 绿
+		#define FG_YELLOW 		 "33m"     // 黄
+		#define FG_BLUE			 "34m"     // 蓝
+		#define FG_PURPLE	 	 "35m"     // 紫
+		#define FG_DARK_GREEN    "36m"     // 深绿
+		#define FG_WHITE		 "37m"     // 白色
+
+		// 例子
+		//#define printf_a(fmt, args...) \
+		//    printf("\e[4m\e[44;37m" fmt "\e[0m\n",  ## args)
+
+		// 分别传入字体选项设置, 背景色, 字体颜色, 格式化字符串, 参数
+		#define printf_effects(set, bg, fg, fmt, args...) \
+			printf(set bg fg fmt "\e[0m\n", ##args)	// 用来解析变参
+
+		// 分别传入字体选项设置, 背景色, 字体颜色, 格式化字符串, 参数
+		#define perror_effects(set, bg, fg, fmt) \
+			perror(set bg fg fmt "\e[0m\n")	// 用来解析变参
+			
+		// 注意: printf_effects传入的fmt不要\n, 否则换的一行也有背景色, 因为"\e[0m\n"在fmt后面
+	4.测试程序
+		#include "term_effects.h"
+		#include <stdio.h>
+		int main(int argc, char **argv)
+		{	
+			int i = 5, j;
+			char *name = "zhang";
+			//下划线, 背景为绿色, 字体为红色
+			printf_effects(UNDERLINE, BG_GREEN, FG_RED, "abcdefg: i = %d; name = %s", i, name);
+			//闪烁, 背景为红, 字体为黑色
+			perror_effects(BG_RED, BG_GREEN, FG_BLACK, "abcdefg");
+			return 0;
+		}
+	
+##################################################################################################################################
+va_start、va_list、va_arg及va_end	(variable) vsprintf
+源码: 	
+	typedef void* va_list;
+	void    va_start(va_list ap, prev_param );	 /* ANSI version */
+	typedef va_arg(va_list ap, type );
+	void    va_end(va_list ap );
+1.va_list表示可变参数列表类型，实际上就是一个void *指针
+2、va_start (va_list ap, arg);
+    va_start用于获取函数参数列表中可变参数的首指针(获取函数可变参数列表)
+	  * 输出参数ap(类型为va_list): 用于保存函数参数列表中可变参数的首指针(即,可变参数列表)
+	  * 输入参数A: 为函数参数列表中最后一个固定参数(格式化字符串: const char *format)
+3、va_arg
+    va_arg用于获取当前ap所指的可变参数并将并将ap指针移向下一可变参数
+	  * 输入参数ap(类型为va_list): 可变参数列表，指向当前正要处理的可变参数
+	  * 输入参数T: 正要处理的可变参数的类型
+	  * 返回值: 当前可变参数的值
+4.va_end
+	他是输入的参数 ap 置为 NULL
+5.int vsprintf(char *string, char *format, va_list param);//将param 按格式format写入字符串string中
+##################################################################################################################################
+处理可变参数（传递变参）
+void print(char *fmt, ...)
+{
+    char buf[1024];
+    char *str;
+    va_list v_list;
+    va_start(v_list, fmt);      // 将fmt整理为阐述表v_list
+
+    vsprintf(buf, fmt, v_list); // 将fmt按照v_list的格式写入param
+    printf("%s\n", buf);             // aa,bb,123
+
+    str =  va_arg(v_list, char*);
+    printf("%s\n", str);             // aa
+
+    str =  va_arg(v_list, char*);
+    printf("%s\n", str);             // bb
+
+    int i =  va_arg(v_list, int);
+    printf("%d\n", i);                // 123
+
+    va_end(v_list);
+}
+int main(int argc, char *argv[])
+{
+    print("%s,%s,%d", "aa", "bb", 123);
+}
+	
+
+##################################################################################################################################
+
+"#"、"##"、可变参数打印、解析可变参数
+	#   把宏参数变为一个字符串
+	##  把两个宏参数贴合在一起.
+	
+	1."#"、"##"的一般用法: 
+		#define STR(s)     #s
+		#define CONS(a,b)  int(a##e##b)
+		int main()
+		{
+		   printf(STR(vck));           // 输出字符串"vck"
+		   printf("%d\n", CONS(2,3));  // 2e3 输出:2000
+		   return 0;
+		}
+	2."##"接受,打印可变参数
+		参考：glibc库的BEBUG函数
+		/* 		
+			# define PRINTF(fmt, args...) \
+				  printf (fmt, ##args);		\
+		*/		
+		使用方法： 
+			#define pr_debug(fmt,arg...) printk(fmt,## arg)
+			这里arg 表示其余的参数可以是零个或多个，这些参数以及参数之间的逗号构成arg 的值，在宏使用##扩展时替换arg，
+			例如下列代码：
+			pr_debug("%s:%d",filename,line)		会被扩展为：
+			printk("%s:%d", filename, line)
+	3.解析可变参数
+		参考： glibc， printf函数
+		/* printf (const char *format, ...)
+			{
+			  va_list arg;
+			  int done;
+
+			  va_start (arg, format);
+			  done = vfprintf (stdout, format, arg);
+			  va_end (arg);
+
+			  return done;
+			}
+		*/
+		// 举例
+		#include <stdarg.h>
+		#include <stdio.h>
+		#include <string.h>
+		static int demo(char *msg, ... )
+		{
+		   /*定义保存函数参数的结构*/
+		   va_list ap;
+		   int argno = 0;
+		   char *para;
+		   va_start(ap, msg);
+		   while (1)
+			{
+				para = va_arg(ap, char *);
+				if (strcmp( para, "") == 0 )
+					break;
+				printf("%d is: %s\n", argno, para);
+				argno++;
+			}
+		   va_end(ap);
+		   return 0;
+		}
+		void main()
+		{
+		   demo("DEMO", "This", "is", "a", "demo!", "");	// ""为结束符
+		}
+######################################################################################		
+计算数组成员个数
+	#define ARRY_SIZE(A) (sizeof(A)/sizeof(A[0]))
+######################################################################################		
+传递数组	
+	#define ARRY_SIZE(A) (sizeof(A)/sizeof(A[0]))
+	typedef struct t {
+		int a;
+		char name[20];
+	} t_t;
+
+	static t_t arry[] = {
+		{1, "aaa"},
+		{2, "bbb"},
+		{2, "ccc"}, 
+	};
+	void func (t_t **arry)
+	{	int i;
+		for (i = 0; i < 3; i++)
+			printf("name = %s\n", (*arry)[i].name);
+	}
+	int main(int argc, char **argv)
+	{
+		func(arry);
+		int n = ARRY_SIZE(&arry);
+		printf("n = %d\n", n);
+		return 0;
+	}
+######################################################################################		
+i++和++i
+	int main(int argc, char **argv)
+	{
+		int i = 0;
+	 
+		// 先用原来的i执行程序, 然后i再+1
+		printf("%d\n", i++); // 输出0 : i = 0; 执行程序; i += 1 = 1
+		printf("%d\n", i++); // 输出1 : i = 1; 执行程序; i += 1 = 2
+		printf("%d\n", i++); // 输出2 : i = 2; 执行程序; i += 1 = 3
+		printf("%d\n", i);   // 输出3 
+	 
+		// 先将i+1, 然后再执行程序
+		printf("--------------------\n");
+		i = 0;
+		printf("%d\n", ++i); // 输出1 :  i += 1 = 1;  执行程序;
+		printf("%d\n", ++i); // 输出2 :  i += 1 = 2;  执行程序;
+		printf("%d\n", ++i); // 输出3 :  i += 1 = 3;  执行程序;
+		printf("%d\n", i);	 // 输出3 
+		return 0;
+	}
+######################################################################################		
+open和fopen的区别
+1. 来源
+	1.从来源的角度看，两者能很好的区分开，这也是两者最显而易见的区别：
+	2.open是UNIX系统调用函数（包括LINUX等），返回的是文件描述符（File Descriptor），它是文件在文件描述符表里的索引。
+	3.fopen是ANSIC标准中的C语言库函数，在不同的系统中应该调用不同的内核api。返回的是一个指向文件结构的指针。 
+	 PS:从来源来看，两者是有千丝万缕的联系的，毕竟C语言的库函数还是需要调用系统API实现的。
+ 
+2. 移植性
+	1.`fopen`是C标准函数，因此拥有良好的移植性；
+	2.`open`是UNIX系统调用，移植性有限。如windows下相似的功能使用API函数`CreateFile`。
+
+3. 适用范围
+	1.open返回文件描述符，而文件描述符是UNIX系统下的一个重要概念，UNIX下的一切设备都是以文件的形式操作。
+		如网络套接字、硬件设备等。当然包括操作普通正规文件（Regular File）。
+	2.fopen是用来操纵普通正规文件（Regular File）的。
+ 
+4. 文件IO层次
+	1.前者属于低级IO函数，后者属于高级IO函数。
+	2.低级和高级的简单区分标准是：谁离系统内核更近。低级文件IO运行在内核态，高级文件IO运行在用户态。
+1
+5. 缓冲
+	缓冲文件系统:
+		缓冲文件系统的特点是：
+		 1.在内存开辟一个“缓冲区”，为程序中的每一个文件使用；当执行读文件的操作时，从磁盘文件将数据先读入内存“缓冲区”，装满后再从内存“缓冲区”依此读出需要的数据。执行写文件的操作时，先将数据写入内存“缓冲区”，待内存“缓冲区”装满后再写入文件。由此可以看出，内存“缓冲区”的大小，影响着实际操作外存的次数，内存“缓冲区”越大，则操作外存的次数就少，执行速度就快、效率高。一般来说，文件“缓冲区”的大小随机器 而定。fopen, fclose, fread, fwrite, fgetc, fgets, fputc, fputs, freopen, fseek, ftell, rewind等。
+		 2.缓冲文件系统是借助文件结构体指针来对文件进行管理，通过文件指针来对文件进行访问，既可以读写字符、字符串、格式化数据，也可以读写二进制数据。 putc, putchar等。
+
+	非缓冲文件系统: 
+		1.非缓冲文件系统依赖于操作系统，通过操作系统的功能对文件进行读写，是系统级的输入输出，它不设文件结构体指针，只能读写二进制文件，但效率高、速度快，由于ANSI标准不再包括非缓冲文件系统，
+		2.因此建议大家最好不要选择它。open, close, read, write, getc, getchar,	
+6.总结	
+	1.一句话总结一下，就是open无缓冲，fopen有缓冲。前者与read, write等配合使用， 后者与fread,fwrite等配合使用。
+	2.使用fopen函数，由于在用户态下就有了缓冲，因此进行文件读写操作的时候就减少了用户态和内核态的切换（切换到内核态调用还是需要调用系统调用API:read，write）；而使用open函数，在文件读写时则每次都需要进行内核态和用户态的切换；表现为，如果顺序访问文件，fopen系列的函数要比直接调用open系列的函数快；如果随机访问文件则相反。
+######################################################################################
+缓冲方式：	
+		缓冲有三种方式：无缓冲（ _IONBF ）、行缓冲（ _IOLBF ）和全缓冲（ _IOFBF ）。
+		· 无缓冲：就是没有缓冲区，每次调用 stdio 库函数都会立刻调用 read/write 系统调用。
+		· 行缓冲：对于输出流，收到换行符之前，一律缓冲数据，除非缓冲区满了。对于输入流，每次读
+		   取一行数据。
+		· 全缓冲：就是缓冲区满之前，不会调用 read/write 系统调用来进行读写操作。
+######################################################################################	
+设置编译器使存储的结构体n字节对齐
+	#pragma pack(push)
+	#pragma pack(n)    // 强制让编译器内存对齐为：1字节对齐 /* 必须在结构体定义之前使用 */
+		// 在这儿定义多个结构体 // 
+	#pragma pack(pop)  /* 恢复先前的pack设置 */
+######################################################################################		
+异步IO和同步IO
+	1.异步IO:
+	   的概念和同步IO相对。当一个异步过程调用发出后，调用者不能立刻得到结果。实际处理这个调用的部件在完成后，通过状态、通知和回调来通知调用者。
+	 在一个CPU密集型的应用中，有一些需要处理的数据可能放在磁盘上。预先知道这些数 据的位置，所以预先发起异步IO读请求。
+	 等到真正需要用到这些数据的时候，再等待异步IO完成。使用了异步IO，在发起IO请求到实际使用数据这段时间 内，程序还可以继续做其他事情
+	2.同步IO
+	   所谓同步，就是在发出一个功能调用时，在没有得到结果之前，该调用就不返回。也就是必须一件一件事做,等前一件做完了才能做下一件事。
+######################################################################################		
+秒 毫秒 微秒  纳秒 皮秒: 时间单位换算
+1s=10^3ms(毫秒)=10^6μs(微秒)=10^9ns(纳秒)=10^12ps(皮秒)=10^15fs(飞秒)=10^18as(阿秒)=10^21zm(仄秒)=10^24ym(幺秒) 
+######################################################################################		
+数组: 时刻记住指针数组里面存放的是指针变量
+(1)// char **
+	char *p = "abcdefgh" = 0x1234;	
+	// p是一个指针变量, 占4个字节, p中存储的是字符串"abcd"在内存中的首地址;
+	// p指向的是字符串"abcdefgh"
+	char **p2;	// p是一个指针变量, 占4个字节
+	p2 = &p;	// 指针变量p2中存储的是指针变量p的地址(4个字节), p2指向的是p的地址
+	*p2 = p = 0x1234;	// 通过*p2可访问到p中存储的值。
+	**p2 = *(0x1234)	// 通过**p2可以访问到p中存储的地址所指向的空间
+(2)字符串数组
+	// char *a = {"ab", "cd"};
+	假如"ab","cd"在内存中分配的地址分别保存在变量p3, p4中; 数组在内存中分配的首地址保存在变量p中.
+	则从地址p开始往后4个字节存放的是变量p3的地址; p开始往后4个字节到8个之间存放的是变量p4的地址。
+	所以：变量p是一个二级指针:
+		  有*p = p3 = &"ab"; *(p+1) = p4 = "cd"; // 通过二级指针变量可以访问到4个字节的地址, 所以p+1加了4字节
+	==>所以有:
+	char **s = a = &a[0] = &p3;
+	s[0] = p3 = &"ab";
+	s[1] = p4 = &"cd";
+	*s[0] = *p3 = "ab";
+	*s[1] = *p4 = "cd";
+	
+(2)结构体指针数组
+	typedef struct{
+		int a;
+		int b;
+	}info_t;
+	int main()
+	{
+		info_t *t1 = malloc(sizeof(info_t));
+		info_t *t2 = malloc(sizeof(info_t));
+		t1->a = 1;
+		t1->b = 2;
+		t2->a = 3;
+		t2->b = 4;
+
+		//	info_t *p1 = t1, info_t *p1 = t1,
+		// 相当于: info_t arry[] = {p1, p2}
+		info_t *arry[] = {t1, t2}; // 数组中的每一项都是一个info_t类型的指针变量
+		info_t **parry = arry;	  // parry中存储的是变量p1的首地址: parry = &p1
+
+		 // parry[0] = p1 = t1; parry[1] = p2 = t2;
+		 printf("%d %d %d %d\n", parry[0]->a, parry[0]->b, parry[1]->a ,parry[1]->b);
+		return 0;
+	}
+(3)动态创建一个结构体数组
+typedef struct{
+	int a;
+	int b;
+}info_t;
+
+int main()
+{
+
+	info_t **parry = {NULL};
+	
+	
+	parry = (info_t **)malloc(sizeof(info_t *) * 2);	// 分配一个结构体指针数组
+	printf("size = %d\n", sizeof(parry)); // 占4个字节
+	
+	parry[0] = malloc(sizeof(info_t));
+	parry[1] = malloc(sizeof(info_t));
+
+	parry[0]->a = 2;
+	parry[0]->b = 3;
+	parry[1]->a = 4;
+	parry[1]->b = 5;
+	// parry[0] = p1 = t1; parry[1] = p2 = t2;
+	printf("%d %d %d %d\n", parry[0]->a, parry[0]->b, parry[1]->a ,parry[1]->b);
+
+	free(parry[0]); 
+	free(parry[1]); 
+	free(parry); 
+	return 0;
+}
+	
+	printf("%d %d %d %d\n", parry[0]->a, parry[0]->b, parry[1]->a ,parry[1]->b); // 2345
+(4)查看动态分配的指针数组的成员个数
+	1.开始的时候你拿NULL初始化指针数组 char*tmp[32] = {NULL};
+	2.然后用循环遍历一圈当发现遍历到NULL的时候循环结束.
+	
+	info_t **parry = {NULL};
+	int i = 0;
+	while(parry[i] != NULL) {i++};
+	printf("i = %d\n", i);		// 数组中的成员个数
+	
+##############################################################################
+超级BUG: 
+	1.if后跟了分号
+	2.list_for_each后跟了分号
+	
+##############################################################################
+将buf传递过去后, 不能在被调用函数中用sizeof(buf)来表示buf的大小, 但是可以用strlen来表示buf的大小
+	因为这时sizeof(buf) = 一个指针的大小
+	如: void f(char *buf)
+	{
+		printf("size2 =%d\n", sizeof(buf));	// 只是指针的大小, 4字节
+		printf("size2 =%d\n", strlen(buf));	// 字符串的长度, 9字节
+	}
+	int main()
+	{
+		char buf[100];
+		memset(buf, 0, 100);
+		strcpy(buf, "123456789");
+		printf("size1 = %d\n", sizeof(buf));	// 1024
+		f(buf);
+		return 0;
+	}
+##############################################################################
+二维数组大小:
+	int arry[2][2] = {{1,2,},{3,4}};
+    qDebug()<<sizeof(int);      // 4
+    qDebug()<<sizeof(arry);     // 16 所有元素大小
+    qDebug()<<sizeof(arry[0]);  // 8, 两个元素的大小
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+								cJSON操作
+▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
+下载地址: https://sourceforge.net/projects/cjson/?source=typ_redirect
+注意:
+	编译cJSON.c时需要链接数学库(-lm)
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁		
+【一】cJSON对象和字符串相互转换
+	void test_cJSON_Print(const char *text)	// text: json字符串
+	{
+		cJSON *obj = cJSON_Parse(text);		// 转换为json对象
+		if (obj) {
+			char *out = cJSON_Print(obj);	// json对象转换为字符串	
+			cJSON_Delete(obj);				// 释放json对象		
+			free(out);						// 释放字符串占用的空间
+		}
+	}
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁		
+【二】从文件中读取json字符串
+	char *read_file(const char *filename)
+	{
+		FILE *f;long len;char *data;
+		f=fopen(filename,"rb");			// 以可读二进制方式打开文件
+		if (!f)
+			return NULL;
+		fseek(f,0,SEEK_END);			// 将文件的偏移值设置到文件末尾
+		len=ftell(f);					// 确定文件当前偏移位置
+		fseek(f,0,SEEK_SET);			// 将文件的偏移值设置到文件开始位置
+		data=(char*)malloc(len+1);		// 分配 len +1
+		fread(data,1,len,f);			// 从f中读取数据到data, 每次读1个字节, 共读len次
+		fclose(f);						// 关闭文件
+		return data;					// 注意: data需要手动释放
+	}
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁		
+【三】构造json对象	
+	①创建json对象
+		cJSON *obj = cJSON_CreateObject();	// obj需要手动释放
+	②创建json数组
+		cJSON *arry = cJSON_CreateArray();	// arry需要手动释放
+
+	③json对象中插入键值对(值: 字符串、数字、bool类型、null、json对象、数组)
+		cJSON *fmt；
+		cJSON *obj = cJSON_CreateObject();
+		cJSON_AddStringToObject(obj, "name", "Jack (\"Bee\") Nimble");   // 键值为字符串
+		cJSON_AddNumberToObject(obj, "width", 1920);					 // 键值为数字
+		cJSON_AddBoolToObject(obj, "interlace", false);					 // 键值为bool类型
+		cJSON_AddNullToObject(obj, "_NULL_");							 // 键值为null
+		cJSON_AddItemToObject(obj, "format", fmt = cJSON_CreateObject());// 键值为cJSON对象
+			// 键值为数组
+		cJSON *arry = cJSON_CreateArray();	// arry需要手动释放
+		cJSON_AddItemToObject(obj, "arry", arry);// 键值为cJSON对象
+	④数组中插入值(字符串、数字、bool类型、null)
+		arry2 = cJSON_CreateArray();
+		cJSON_AddNumberToObject(arry2, "", 1);
+		cJSON_AddNumberToObject(arry2, "", 2);						 // [1,2]
+		cJSON_AddStringToObject(obj, "", "Jack (\"Bee\") Nimble");   // ["Jack (\"Bee\") Nimble"]
+		cJSON_AddBoolToObject(obj, "", false);					 	 // [false]
+		cJSON_AddNullToObject(obj, "");							 	 // [null]
+	⑥数组中插入json对象
+		arry = cJSON_CreateArray();
+		cJSON *item1 = cJSON_CreateObject();
+		cJSON *item2 = cJSON_CreateObject();
+		cJSON_AddNumberToObject(item1, "k1", 11);
+		cJSON_AddNumberToObject(item2, "k2", 22);
+		cJSON_AddItemToArray(arry, item1);
+		cJSON_AddItemToArray(arry, item2);
+	
+	⑦示例:
+		/*	输出结果
+			{
+				"name":	"Jack (\"Bee\") Nimble",
+				"format":	{
+					"type":	"rect",
+					"width":	1920,
+					"height":	1080,
+					"interlace":	false,
+					"frame rate":	24,
+					"_NULL_":	null
+				},
+				"arry":	[{
+						"k1":	11
+					}, {
+						"k2":	22
+					}],
+				"arry2":	[1, 2]
+			}		
+		*/
+		char *construct_json_obj()
+		{
+			cJSON *obj = cJSON_CreateObject();
+			cJSON *fmt, *arry, *arry2;
+			cJSON_AddStringToObject(obj, "name", "Jack (\"Bee\") Nimble");
+			cJSON_AddItemToObject(obj, "format", fmt = cJSON_CreateObject());
+			cJSON_AddStringToObject(fmt, "type", "rect");
+			cJSON_AddNumberToObject(fmt, "width", 1920);
+			cJSON_AddNumberToObject(fmt, "height", 1080);
+			cJSON_AddBoolToObject(fmt, "interlace", false);
+			cJSON_AddNumberToObject(fmt, "frame rate", 24);
+			cJSON_AddNullToObject(fmt, "_NULL_");
+			
+			// 数组中插入json对象
+			arry = cJSON_CreateArray();
+			cJSON *item1 = cJSON_CreateObject();
+			cJSON *item2 = cJSON_CreateObject();
+			cJSON_AddNumberToObject(item1, "k1", 11);
+			cJSON_AddNumberToObject(item2, "k2", 22);
+			cJSON_AddItemToArray(arry, item1);
+			cJSON_AddItemToArray(arry, item2);
+			
+			// 数组中插入值
+			arry2 = cJSON_CreateArray();
+			cJSON_AddNumberToObject(arry2, "", 1);
+			cJSON_AddNumberToObject(arry2, "", 2);
+
+			// json对象中插入数组
+			cJSON_AddItemToObject(obj, "arry", arry);
+			cJSON_AddItemToObject(obj, "arry2", arry2);
+			
+			//print_obj(obj);
+			char *out = cJSON_Print(obj);
+			free(arry2);
+			free(item1);
+			free(item2);
+			free(arry);
+			free(fmt);
+			free(obj);
+			return out;
+		}
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁		
+【三】解析json对象	
+例:
+	/*	// obj
+		{
+			"name":	"Jack (\"Bee\") Nimble",
+			"format":	{
+				"type":	"rect",
+				"width":	1920,
+				"height":	1080,
+				"interlace":	false,
+				"frame rate":	24,
+				"_NULL_":	null,
+				"arry":[{"k1":11}, {"k2":true}]
+				"arry2":[1,2,3];
+			}
+		}
+	*/
+解析过程:
+	char *text = construct_json_obj();
+	//printStr(text);
+	
+	// 解析json对象
+	cJSON *obj =  cJSON_Parse(text);
+
+	// cJSON对象中,键值为valuestring
+	char *valuestring = cJSON_GetObjectItem(obj, "name")->valuestring;
+	printStr(valuestring);
+
+	cJSON *fmt = cJSON_GetObjectItem(obj, "format");
+	valuestring = cJSON_GetObjectItem(fmt, "type")->valuestring;
+	printStr(valuestring);
+
+	// cJSON对象中,键值为valueint
+	int valueInt = cJSON_GetObjectItem(fmt, "width")->valueint;
+	printInt(valueInt);
+
+	valueInt = cJSON_GetObjectItem(fmt, "height")->valueint;
+	printInt(valueInt);
+
+	
+	// cJSON对象中,键值为bool(0/1)
+	int valuebool = cJSON_GetObjectItem(fmt, "interlace")->valueint;	/*注意: 0 或者 1*/ 
+	printInt(valuebool);
+
+	// cJSON对象中,键值为null(NULL)
+	if (NULL == cJSON_GetObjectItem(fmt, "_NULL_")->valuestring)		/*注意: null是空指针NULL */
+		printf("valuestring is null\n");
+
+	
+	// cJSON对象中,键值为数组
+	printStr("------------------------------------------------");
+	cJSON *arry =  cJSON_GetObjectItem(obj, "arry");
+	cJSON *arry2 =  cJSON_GetObjectItem(obj, "arry2");
+
+	// 获取数组中项目个数
+	int len = cJSON_GetArraySize(arry);
+	printInt(len);
+
+	// 数组对象, 键值为cJSON对象
+	cJSON *subItem = cJSON_GetArrayItem(arry, 0);
+	// cJSON对象中,键值为valueint
+	valueInt = cJSON_GetObjectItem(subItem, "k1")->valueint;
+	printInt(valueInt);
+
+	// 数组对象, 键值为cJSON对象
+	subItem = cJSON_GetArrayItem(arry, 1);
+	// cJSON对象中,键值为valueint
+	valueInt = cJSON_GetObjectItem(subItem, "k2")->valueint;
+	printInt(valueInt);
+
+	printStr("------------------------------------------------");
+	// arry2
+	len = cJSON_GetArraySize(arry2);
+	printInt(len);
+
+	// 数组对象中的值
+	valueInt = cJSON_GetArrayItem(arry2, 0)->valueint;
+	printInt(valueInt);
+
+	valueInt = cJSON_GetArrayItem(arry2, 1)->valueint;
+	printInt(valueInt);
+	
+	valueInt = cJSON_GetArrayItem(arry2, 2)->valueint;
+	printInt(valueInt);
+	cJSON_Delete(obj);
+	free(text);
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁		
+【三】修改json对象的值	
+①思路
+	1.找到要修改的对象
+	2.删除要修改的对象
+	3.构造新对象并添加
+②示例
+	cJSON *obj = read_status_file();
+	cJSON_DeleteItemFromObject(obj, sid);
+	cJSON_AddNumberToObject(obj, sid, status_value);
+	cJSON_Delete(obj);
+
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+使用全局变量
+	1.在1.c文件中定义全局变量 
+		int g_var;
+	2.在某个2.h头文件中声明外部变量
+		extern int g_var;
+	3.在另一个3.c文件中使用全局变量
+		#include <2.h>
+		g_var = 5;
+
+
+
+
+
+

@@ -1,0 +1,228 @@
+注意:
+	1.我们仅仅用opencv采集的视频, 采集的音频我们丢弃
+	2.我买的2合一摄像头只能在window中的opencv中打开。
+
+
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第1章 opencv环境搭建
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+【一】window中编译opcv
+	1.下载opencv源码，解压	//https://opencv.org/releases/
+	2.下载安装cmake,并使用
+		1.选择源码路径为:opcv的解压后的根路径
+		2.选择构建路径为:opcv的解压后的build目录 // 如果没有build目录,自行创建
+		3.点击configure, 选择vs2017
+		4.选择默认配置
+		//5.选中DUILD_opencv_world让所有的库生成到一个文件中
+		6.点击generate,来生成项目文件
+		7.完成后在opcv的build目录就生成了vs文件
+	3.在vs中打开生成的opencv项目
+	4.编译
+	5.在opencv的 build/install目录下生成编译好的头文件及库
+		1.头文件在include目录
+		2.库在x86 /x64
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁		
+【一】linux中编译opcv3.2.0
+	下载opencv源码: 	https://opencv.org/releases/page/3/
+	/* 安装依赖 */
+	sudo apt-get install build-essential
+	sudo apt-get install cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
+	sudo apt-get install python-dev python-numpy libtbb2 libtbb-dev libjpeg-dev libpng-dev libtiff-dev libjasper-dev libdc1394-22-dev
+
+	unzip opencv-3.2.0.zip
+	cd opencv-3.2.0
+	cmake -DCMAKE_INSTALL_PREFIX=$PWD/tmp 
+	make -j4
+	sudo make install
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁		
+【一】linux中编译opcv3.4.0
+	cd opencv.3.4.0
+	rm CMakeCache.txt
+	mkdir build
+	cd build
+	// OpenCV是不让在源文件目录下编译的，所以在编译之前可以在opencv目录下创建build或者release等目录
+	cmake -DCMAKE_INSTALL_PREFIX=$PWD/tmp ..
+	make -j3
+	sudo make install
+	
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第0章	数据结构
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+class VideoCapture {
+	bool read(OutputArray image);
+	bool set(int propId, double value);
+	double get(int propId);
+	open(const String& filename, int apiPreference);
+};
+// 描述一帧数据
+class Mat {
+	int rows, cols;		// 一帧数据的宽, 高。
+	uchar	*data;		// 指向图片数据
+	size_t elemSize();	// 一个像素的字节数
+	total;				// 总像素个数
+
+}		
+		
+		
+		
+	
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第0章	opcvAPI
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+waitKey()
+	传入刷新图像频率单位为ms, 为0时等待键盘输入才会返回
+	返回值为当前键盘的按键值
+	超时返回-1
+	实际项目控制速度不要直接用sleep
+	
+
+
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第0章	第一个例子: 显示图片
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+#include <opencv2/core.hpp>			// 核心头文件
+#include <opencv2/imgcodecs.hpp>	//imread, 读图片
+#include <opencv2/highgui.hpp>		//imread, 包含界面的一些文件
+
+using namespace cv;
+int main()
+{
+	Mat image = imread("../1.png");	// 加载一个图片
+	namedWindow("img");		// 打开一个系统窗口, 名字为img
+	imshow("img", image);	// 在"img"的系统窗口中显示image
+	waitKey(0);				// 刷新界面, 获取键盘输入
+	return 0;
+}
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第0章 Mat图像空间
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+isContinuous
+	.判断存储空间是否连续
+	.通过step来确定间隔的步数
+遍历
+	1.对连续空间的遍历访问	// 直接地址访问连续空间
+		Mat mat(1920, 1080, CV_8UC3)	// 创建一个行为1920,列为1080,类型为RGB的mat图像
+		int size = mat.rows * mat.cols * mat.elemSize(); 	// 行数 x 列数 x 像素的字节数
+		for (int i=0; i<size; i += mat.elemSize())	
+		{ 
+			mat.data[i] = 0; 	// B
+			mat.data[i+1] = 0; 	// G
+			mat.data[i+2] = 0;  // R
+		}
+		namedWindow("mat");
+		imshow("mat", mat);
+		waitKey(0);
+		// 优化编码后效率高13ms (4000 * 3000)
+
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第0章 VideoCapture (读取视频源)
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+【一】介绍
+	支持: VFW(windows), 1394,v4l,v4l2,文件,rtsp流, openni....
+	// cap_ffmpeg_impl.hpp
+		VideoCapture
+		bool open(int index)		// index: 摄像机列表
+		VideoCapture cap(index)
+	opencv打开摄像机的c源码分析(cap.cpp):	// 也提供了C++的方法
+	
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁		
+【二】VideoCaptureAPIs		// https://docs.opencv.org/3.2.0/d4/d15/group__videoio__flags__base.html#ga023786be1ee68a9105bf2e48c700294d
+	VideoCaptureModes	// 通用摄像机输出模式标识符。
+		CAP_MODE_BGR  BGR24 (default) 
+		CAP_MODE_RGB  RGB24
+		CAP_MODE_GRAY  Y8
+		CAP_MODE_YUYV  YUYV
+ 
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁		
+【三】VideoCapture::read	//读取帧
+	read函数做的事情
+		1.先解码
+		2.颜色转换为RGB
+	read函数源码分析
+		VideoCapture::read
+		grab
+			grabFrame
+				av_read_frame(ic, &packet);		// 读一帧
+				avcodec_decode_video(...packet.data, packet.size);	// 解码
+		retrieve(image);	// 图像色彩转换为RGB
+			sws_getCachedContext(AV_PIX_FMT_BGR24)
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁		
+【三】VideoCapture::get(int propId)	//读取帧
+	CAP_PROP_POS_MSEC = 0，		//！<视频文件的当前位置（以毫秒为单位）。
+	CAP_PROP_POS_FRAMES = 1，	//！<0-基于下一个要解码/捕获的帧的索引。
+	CAP_PROP_POS_AVI_RATIO = 2  //！<视频文件的相对位置：0 =电影的开始，1 =电影的结束。
+	CAP_PROP_FRAME_WIDTH = 3，	//！<视频流中帧的宽度。
+	CAP_PROP_FRAME_HEIGHT = 4，	//！<视频流中帧的高度。
+	CAP_PROP_FPS = 5，			//！<帧速率。
+	CAP_PROP_FOURCC = 6，		//！<编解码器的4个字符代码。看VideoWriter :: fourcc。
+	CAP_PROP_FRAME_COUNT = 7，	//！<视频文件中的帧数。
+	CAP_PROP_FORMAT = 8，		//！<VideoCapture :: retrieve（）返回的％Mat对象的格式。
+	CAP_PROP_MODE = 9，			//！<指示当前捕获模式的特定于后端的值。
+	CAP_PROP_BRIGHTNESS = 10，	//！<图像的亮度（仅适用于相机）。
+	CAP_PROP_CONTRAST = 11，	//！<图像的对比度（仅适用于相机）。
+	CAP_PROP_SATURATION = 12，	//！<图像的饱和度（仅适用于相机）。
+	CAP_PROP_HUE = 13，			//！<图像的色调（仅适用于相机）。
+	CAP_PROP_CONVERT_RGB = 16，	//！<布尔标志，指示是否应将图像转换为RGB。
+	CAP_PROP_SETTINGS = 37，	//！弹出视频/摄像机过滤器对话框（注意：目前仅支持DSHOW后端。属性值被忽略）
+
+
+
+
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第0章 opencv读取帧
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+【一】采集海康威视rtsp帧
+	#include <opencv2/highgui.hpp>		//imread, 包含界面的一些文件
+	using namespace cv;
+	namedWindow("video");	// 打开一个名为"video"的系统窗口
+	int main()
+	{
+		Mat frame;
+		VideoCapture cap;
+		string url = "rtsp://test:test12345@172.16.24.211";	/* rtsp://用户名:密码@ip */ 
+		cap.open(url);			// 打开网络摄像机
+		
+		for(;;){
+			cap.read(frame);		// 读取一帧, 解码, 转换为RGB
+			imshow("video", frame);	// 在"video"窗口中显示frame
+			waitKey(1);				// 刷新界面, 按键是返回
+		}
+	}
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁		
+【三】opencv实时采集摄像头的数据并显示
+	int opencv_camera_debugging()
+	{
+		Mat mat;
+		VideoCapture camera;
+		namedWindow("video");			// 打开一个名为"video"的系统窗口
+		camera.open(CAP_ANY);			// 让系统自动探测摄像头的类型
+		//camera.open(CAP_DSHOW);
+
+		// 设置摄像头采集的编码方式, 瑞尔威视摄像头支持这种格式
+		camera.set(CV_CAP_PROP_FOURCC, CV_FOURCC('M', 'J', 'P', 'G'));
+		camera.set(CV_CAP_PROP_FRAME_WIDTH, 1920);  //宽度 
+		camera.set(CV_CAP_PROP_FRAME_HEIGHT, 1080); //高度
+		//camera.set(CV_CAP_PROP_FPS, 30);			// 帧率, 设置后摄像头有延迟
+		for (;;) {
+			camera.read(mat);			// 读取一帧, 解码, 并转换为BGR24
+			imshow("video", mat);		// 在"video"窗口中显示frame
+			waitKey(1);					// 刷新界面, 按键是返回
+		}
+		return 0;
+	}
+
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第0章 opencv像素格式转换
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+
+
+
+
+
+
+
+
+
+
+
+

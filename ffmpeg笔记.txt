@@ -1,0 +1,2468 @@
+报销资料
+H265编码
+<FFmpeg安卓流媒体播放器开发实战>
+	1.如何编译Android平台的ffmpeg库, 使其指出neon和硬解码, 并测试性能。
+	2.使用opengles的NDK shader高效播放yuv视频,不耗费cpu性能更优
+	3.代码支持硬解码(省电不耗cpu)和多线程解码(高性能每秒解码240帧1080p)
+	4.支持网络流媒体(rtmp, rtsp, http)可以直接拉流播放电视并支持rtsp摄像头访问
+	5.使用opensles NDK(C++)原生播放音频, 不依赖于第三方库。
+	6.课程设计模式引用到事件-观察者、构建者(音频绘制模块)、门面(对外操作一致)、
+		代理(管理对象生存周期，线程安全设置)、适配器（每种解码器做一个适配器）、
+		单件（单独的对象）、多线程生产者-消费者模式。
+		
+--------------------------------------------------------------	
+目的: 做音视频的编码
+	1.录屏用direcs的技术
+	2.话筒录制用Qt5
+	3.用ffmpeg进行封装
+音频帧和视频帧的帧率是不一致的
+
+注意:
+	1.可以通过设置AVCodecContext, 来设置编解码的详细参数
+	2.flv是封装协议, 最终要转成rtmp流媒体协议, 然后再发出去。
+	3.如果媒体流中的编码器为NULL, 则表示是未经编码的原始数据
+	5.凡是标识了"attribute_deprecated"的接口都为弃用接口
+	6.摄像头的初始参数设置,将直接影响到采集到视频的效果
+	
+http://ffmpeg.org/doxygen/3.2/index.html	// 官方API文档	
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第一章	控制
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+码率控制:
+	1.视频编码器常用的码率控制方式包括abr(平均码率)，crf（限制码率），cqp（固定质量）
+	2.ffmpeg中AVCodecContext显示提供了码率大小的控制参数
+	3.ffmpeg中码率控制方式分为以下几种情况：
+		1.如果设置了AVCodecContext中bit_rate的大小，则采用abr的控制方式；	
+		2.如果没有设置AVCodecContext中的bit_rate，则默认按照crf方式编码，crf默认大小为23（此值类似于qp值，同样表示视频质量）；
+		3.如果用户想自己设置，则需要借助av_opt_set函数设置AVCodecContext的priv_data参数。
+
+
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第一章	命令行工具
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+【一】ffmpeg
+	①帧率设置
+		1.强制输出的帧率为24fps
+			ffmpeg -i input.avi -r 24 output.avi
+		2.要强制输入文件的帧速率（仅对原始格式有效）为1 fps，输出文件的帧速率为24 fps：
+			ffmpeg -r 1 -i input.m2v -r 24 output.avi
+			
+	②ffmpeg输出转码过程
+						 提取流(音.视.字)							解码
+			input_file ->---------->得到编码结束的数据包->-------->解码后的帧
+				重新编码				  混合流
+			->----------> 编码后的数据包---------->Output_file
+	③流拷贝
+			1.将复制参数提供给-codec选项
+						   提取流(音.视.字)				   混合流
+			2.input_file ->---------->得到编码结束的数据包->-------->输出文件
+			3.由于没有解码或编码，它非常快，没有质量损失。
+	④流选择
+		1.-map用于手动控制每个输出文件中的流选择。
+		2.用户可以跳过-map并让ffmpeg执行自动流选择
+		3. -vn / -an / -sn / -dn选项可用于分别跳过包含视频，音频，字幕和数据流
+		4.使用-map时，只有用户映射的流包含在该输出文件中
+		5.流选择应该用-codec选项
+	④选项
+		1.'KB'，'MiB'，'G'和'B'作为数字后缀。
+		[4.1]流选项
+			1. -codec：a：1 ac3包含a：1流说明符，匹配第二个音频流。
+			2.空流说明符匹配所有流。 例如，-codec copy或-codec：copy将复制所有流而无需重新编码。
+			....
+		[4.2]通用选项(这些选项在库中的所有工具中共享)
+			-h, -?, -help, --help [arg]
+				arg可能为
+					long: 
+						除基本工具选项外，还可以打印高级工具选项。
+					full: 
+						打印完整的选项列表，包括编码器，解码器，分路器，复用器，滤波器等的共享和专用选项。
+					decoder=decoder_name	
+						打印有关名为decoder_name的解码器的详细信息。使用-decoders选项获取所有解码器的列表。
+					encoder=encoder_name
+						打印有关名为encoder_name的编码器的详细信息。使用-encoders选项获取所有编码器的列表。
+					demuxer=demuxer_name
+						打印有关名为demuxer_name的分路器的详细信息。使用-formats选项获取所有解复用器和复用器的列表。
+					demuxer=demuxer_name
+						打印有关名为muxer_name的muxer的详细信息。使用-formats选项获取所有复用器和分路器的列表。
+					muxer=muxer_name
+						打印有关名为muxer_name的muxer的详细信息。使用-formats选项获取所有复用器和分路器的列表。
+					filter=filter_name
+						打印有关过滤器名称filter_name的详细信息。使用-filters选项获取所有过滤器的列表。
+					bsf=bitstream_filter_name
+						打印有关比特流过滤器名称bitstream_filter_name的详细信息。使用-bsfs选项获取所有比特流过滤器的列表。
+			-version
+			-formats				// 就是把合成的文件中提取出不同的格式文件。
+				显示可用格式（包括设备）。
+			-demuxers	
+				显示可用的解复用器。
+			-muxers		
+				显示可用的复用器。	// 合并文件，即将视频文件、音频文件和字幕文件合并为某一个视频格式
+			-devices	
+				显示可用设备。
+			-codecs
+				显示libavcodec已知的所有编解码器。
+			-decoders
+				显示可用的解码器。
+			-encoders
+				显示所有可用的编码器。
+			-bsfs
+				显示可用的比特流过滤器。
+			-protocols
+				显示可用协议。
+			-filters
+				显示可用的libavfilter过滤器。
+			-pix_fmts
+				显示可用的像素格式。 // yuv, rgb, 
+			Show available pixel formats. 
+				-sample_fmts
+			-layouts
+				显示频道名称和标准频道布局。
+			-colors	
+				显示已识别的颜色名称
+			-sources device [，opt1 = val1 [，opt2 = val2] ...]	
+				显示输入设备的自动检测源。	
+				ffmpeg -sources pulse,server=172.16.24.211
+			device[,opt1=val1[,opt2=val2]...]
+				显示输出设备的自动检测接收器。
+				ffmpeg -sinks pulse，server=172.16.24.169
+
+	⑤Main options
+		-f fmt (input/output)
+			强制输入或输出文件格式。通常会自动检测输入文件的格式,因此在大多数情况下不需要此选项。
+		-i url (input)
+			输入文件地址
+		-y (global)
+			无需询问即可覆盖输出文件。
+		-n (global)
+			不要覆盖输出文件，如果已存在指定的输出文件，请立即退出。
+		-stream_loop number (input)
+			设置输入流的循环次数。 循环0表示无循环，循环-1表示无限循环。
+		-c[:stream_specifier] codec (input/output,per-stream)
+		-codec[:stream_specifier] codec (input/output,per-stream)
+			1.为一个或多个流选择编码器（在输出文件之前使用时）或解码器（在输入文件之前使用时）。
+			2.例如: 
+				//所有视频流用libx264编码, 并且拷贝所有的音频流
+					-codec[:stream_specifier] codec (input/output,per-stream)
+				//-将复制所有流，除了第二个视频，它将与libx 264编码，和138音频，将用libvorbis编码。
+					-codec [：stream_specifier]编解码器（输入/输出，每个流）	
+		-t duration (input/output)
+			1.当用作输入选项（在-i之前）时，限制从输入文件读取的数据的持续时间。
+			2.当用作输出选项（在输出URL之前）时，在其持续时间达到持续时间后停止写入输出。
+			3.duration必须是持续时间规范，请参阅ffmpeg-utils（1）手册中的（ffmpeg-utils）持续时间部分。
+		-to position (input/output)
+			停止写入输出或读取位置输入。
+		-itsoffset offset (input)
+			设置输入时间偏移。偏移量将添加到输入文件的时间戳中。 指定正偏移意味着相应的流延迟了offset中指定的持续时间。
+		-itsscale scale (input,per-stream)
+			重新调整输入时间戳。 scale应该是一个浮点数。
+		-timestamp date (output)
+			在容器中设置录制时间戳。
+		-metadata[:metadata_specifier] key=value (output,per-metadata)		
+			可以给出可选的metadata_specifier以在流，章节或程序上设置元数据。
+			//例如，要在输出文件中设置标题：
+				ffmpeg -i in.avi -metadata title="my title" out.flv
+			// To set the language of the first audio stream: 
+				ffmpeg -i INPUT -metadata:s:a:0 language=eng OUTPUT
+		-disposition[:stream_specifier] value (output,per-stream)		
+		-target type (output)
+			指定目标文件类型（vcd，svcd，dvd，dv，dv50）。 类型可以使用pal-，ntsc-或film-作为前缀，以使用相应的标准。 然后自动设置所有格式选项（比特率，编解码器，缓冲区大小）。
+		-frames[:stream_specifier] framecount (output,per-stream)
+	⑥windows采集设备
+		dshow:		dshow可以用来抓取摄像头、采集卡、麦克风等
+		vfwcap:		vfwcap主要用来采集摄像头类设备
+		gdigrab:	gdigrab则是抓取Windows窗口程序。
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】ffplay
+	①流说明符
+		stream_index
+			使用此索引匹配流。 例如。 -threads：1 4将第二个流的线程数设置为4.
+		stream_type[:additional_stream_specifier]
+			stream_type是以下之一：视频为“v”或“V”，音频为“a”，副标题为“s”，数据为“d”，附件为“t”。 'v'匹配所有视频流，'V'仅匹配未附加图片，视频缩略图或封面艺术的视频流。 
+		p:program_id[:additional_stream_specifier]
+			使用id program_id匹配程序中的流。 如果使用additional_stream_specifier，则它匹配两个都是程序一部分并与additional_stream_specifier匹配的流。
+		#stream_id or i:stream_id
+			通过流id匹配流（例如，MPEG-TS容器中的PID）。
+		m:key[:value]
+			使用具有指定值的元数据标记键匹配流。 如果未给出value，则将包含给定标记的流与任何值匹配。
+		u
+		匹配具有可用配置的流，必须定义编解码器并且必须存在诸如视频维度或音频采样率之类的基本信息。
+	②通用选项
+		在ffmpeg工具中已经描述过
+	③Main options
+		-x width	
+			强制显示的宽度
+		-y height		
+			强制显示的高度
+		-fs
+			全屏模式启动
+		-an
+			禁用音频
+		-vn
+			禁用视频
+		-sn
+			禁用字幕
+		-ss pos
+			在指定的位置开始播放
+		-t duration
+			指定播放音频/视频的持续时间。
+		-bytes
+			在指定字节处开始播放
+		-seek_interval
+			设置自定义间隔，以秒为单位，以查找左右键。默认为10秒。
+		-nodisp
+			禁用图形显示
+		-noborder
+			无边界窗口
+		-alwaysontop
+			窗口总在最上层
+		-volume
+			设置启动音量。0表示沉默，100表示无音量缩小或放大。负值处理为0，大于100的值处理为100
+		-f fmt
+			强制指定一个格式
+		-window_title title
+			设置窗口标题
+		-left title
+		-top title
+			设置窗口位置
+		-loop number
+			循环播放电影次数。0意味着永远。
+		-showmode mode
+		将显示模式设置为use。可用的模式值如下：
+			‘0, video’
+			show video 
+			‘1, waves’
+			show audio waves 
+			‘2, rdft’
+		-vf filtergraph
+			创建过滤器图指定的过滤器，并使用它过滤视频流。
+		-af filtergraph
+			过滤器图是对应用于输入音频的过滤器的描述。使用选项“-Filters”显示所有可用的过滤器(包括源和接收器)。
+		-i input_url	
+			Read input_url. 
+	④播放期间的操作
+		q, ESC
+		f	暂停
+		m 静音
+		9,0音量设置
+		...
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【三】工具应用
+		// 1.列出支持的采集类型
+	ffmpeg -hide_banner -devices
+		// 2.列出支持的dshow采集设备
+	ffmpeg -list_devices true -f dshow -i dummy 
+		// windows采集并传输
+	ffmpeg -re -f dshow -i video="HD USB Camera" -vcodec libx264 -f mpegts udp://172.16.24.169:2000
+	ffmpeg  -list_devices true -f dshow video="HD USB Camera"
+	
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【四】ffmpeg性能优化
+①总结：
+		ffmpeg设置转码延时的参数和步骤如下:
+		 . 关闭sync-lookahead
+		 . 降低rc-lookahead，但别小于10,默认是-1
+		 . 降低threads(比如从12降到6)
+		 . 禁用rc-lookahead
+		 . 禁用b-frames
+		 . 缩小GOP， 
+		 . 开启x264的 -preset fast/faster/verfast/superfast/ultrafast参数
+		 . 使用-tune zerolatency 参数
+②格式转换
+	// 视频抽取音频数据为 S16小端原始音频数据
+	ffmpeg -i a.mp4 -f s16le out.pcm
+
+③推流
+		ffmpeg -re -i /dev/video0 -f mpegts udp://172.16.24.169:2000
+		ffplay udp://172.16.24.169:2000
+	--------------------------------------------------------------
+	ffmpeg -re -f dshow -i video="HD USB Camera" -f mpegts udp://172.16.24.169:2000
+	ffmpeg -re -f dshow -i video="HD USB Camera" -vcodec libx264 -f mpegts udp://172.16.24.169:2000
+	ffmpeg -re -f dshow -i video="HD USB Camera" -vcodec libx264 -acodec libfaac -f mpegts udp://172.16.24.169:2000
+	ffmpeg -re -f dshow -i video="HD USB Camera" -vcodec libx264 -preset fast -acodec libfaac -f mpegts udp://172.16.24.169:2000
+	ffmpeg -re -f dshow -i video="HD USB Camera" -vcodec libx264 -preset ultrafast -acodec libfaac -f mpegts udp://172.16.24.169:2000
+	ffmpeg -i rtsp://admin:hdl1985.@172.16.24.214 -vcodec libx264 -preset ultrafast -acodec libfaac -f mpegts udp://172.16.24.169:2000
+	ffmpeg -re -f dshow -i video="HD USB Camera" -tune zerolatency -vcodec libx264 -preset ultrafast -acodec libfaac -f mpegts udp://172.16.24.169:2000
+	ffmpeg -re -f dshow -i video="HD USB Camera" -r 25 -tune zerolatency -vcodec libx264 -preset ultrafast -acodec libfaac -f mpegts udp://172.16.24.169:2000
+	ffmpeg -re -f dshow -i video="HD USB Camera" -r 120  -vcodec libx264 -preset ultrafast -tune zerolatency -acodec libfaac -f mpegts udp://172.16.24.169:2000
+	注意:
+		-preset ultrafast
+		-tune zerolatency
+		都是h264的属性
+		
+		
+	// 0.5s延迟
+	ffmpeg -re -f dshow -i video="HD USB Camera" -r 30  -fflags nobuffer -flags low_delay  -strict experimental  -vcodec libx264 -tune zerolatency -preset ultrafast -acodec libfaac -f mpegts udp://172.16.24.169:2000
+
+	// 0.5s延迟
+	ffmpeg -re -f dshow -i video="HD USB Camera" -r 30 -vcodec libx264 -preset superfast -tune zerolatency -f flv rtmp://172.16.24.211/live
+	ffmpeg -re -f dshow  -i video="HD USB Camera" -i audio="麦克风 (Realtek(R) Audio)" -r 30 -vcodec libx264 -preset superfast -tune zerolatency -f flv rtmp://172.16.24.211/live
+	// 音视频联合录制	
+	ffmpeg -re -f dshow  -i video="HD USB Camera":audio="麦克风 (Realtek(R) Audio)" -vcodec libx264 -preset superfast -tune zerolatency -f flv rtmp://172.16.24.211/live
+	
+
+④拉流 
+	ffplay udp://172.16.24.169:2000 
+	ffplay udp://172.16.24.169:2000 -fflags nobuffer
+
+	ffplay udp://172.16.24.169:2000 -probesize 500000  -fflags nobuffer
+
+	// 无延迟
+	ffplay -i udp://172.16.24.169:2000    -fflags nobuffer -flags low_delay  -strict experimental
+	
+	ffplay -i rtmp://172.16.24.211/live   -fflags nobuffer -flags low_delay  -strict experimental
+	
+	// 河东公网服务器
+	ffplay rtmp://hdlcontrol.com/live/stream   -fflags nobuffer -flags low_delay  -strict experimental
+	ffplay rtmp://hdlcontrol.com/live/stream   -fflags nobuffer  -max_delay 0 -strict experimental
+	
+	
+	rtmp://172.16.24.211/live	
+	ffplay rtmp://hdlcontrol.com/live/stream
+	
+	
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第一章	libavdevice
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+【一】数据结构
+	struct   AVDeviceRect 
+		int  x // 左上角x坐标
+		int  y // 左上角y坐标
+		int  width // 宽度
+		int  height //高度
+	}
+	struct   AVDeviceCapabilitiesQuery {
+		const AVClass *  av_class 
+		AVFormatContext *  device_context 
+		enum AVCodecID  codec 
+		enum AVSampleFormat  sample_format 
+		enum AVPixelFormat  pixel_format 
+		int  sample_rate 
+		int  channels 
+		int64_t  channel_layout 
+		int  window_width 
+		int  window_height 
+		int  frame_width 
+		int  frame_height 
+		AVRational  fps 
+	}
+	struct AVDeviceInfo {
+		char *  device_name 
+		char *  device_description 
+	}
+	struct   AVDeviceInfoList {
+		AVDeviceInfo **  devices 
+		int  nb_devices 
+		int  default_device 
+	}
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】枚举
+	enum   AVAppToDevMessageType { 
+	   AV_APP_TO_DEV_NONE = MKBETAG('N','O','N','E'), 
+	   AV_APP_TO_DEV_WINDOW_SIZE = MKBETAG('G','E','O','M'), 
+	   AV_APP_TO_DEV_WINDOW_REPAINT = MKBETAG('R','E','P','A'), 
+	   AV_APP_TO_DEV_PAUSE = MKBETAG('P', 'A', 'U', ' '), 
+	   AV_APP_TO_DEV_PLAY = MKBETAG('P', 'L', 'A', 'Y'), 
+	   AV_APP_TO_DEV_TOGGLE_PAUSE = MKBETAG('P', 'A', 'U', 'T'),
+	   AV_APP_TO_DEV_SET_VOLUME = MKBETAG('S', 'V', 'O', 'L'),
+	   AV_APP_TO_DEV_MUTE = MKBETAG(' ', 'M', 'U', 'T'), 
+	   AV_APP_TO_DEV_UNMUTE = MKBETAG('U', 'M', 'U', 'T'), 
+	   AV_APP_TO_DEV_TOGGLE_MUTE = MKBETAG('T', 'M', 'U', 'T'),
+	   AV_APP_TO_DEV_GET_VOLUME = MKBETAG('G', 'V', 'O', 'L'), 
+	   AV_APP_TO_DEV_GET_MUTE = MKBETAG('G', 'M', 'U', 'T') 
+	} 
+	enum   AVDevToAppMessageType { 
+	   AV_DEV_TO_APP_NONE = MKBETAG('N','O','N','E'),
+	   AV_DEV_TO_APP_CREATE_WINDOW_BUFFER = MKBETAG('B','C','R','E'),
+	   AV_DEV_TO_APP_PREPARE_WINDOW_BUFFER = MKBETAG('B','P','R','E'), 
+	   AV_DEV_TO_APP_DISPLAY_WINDOW_BUFFER = MKBETAG('B','D','I','S'), 
+	   AV_DEV_TO_APP_DESTROY_WINDOW_BUFFER = MKBETAG('B','D','E','S'),
+	   AV_DEV_TO_APP_BUFFER_OVERFLOW = MKBETAG('B','O','F','L'), 
+	   AV_DEV_TO_APP_BUFFER_UNDERFLOW = MKBETAG('B','U','F','L'),
+	   AV_DEV_TO_APP_BUFFER_READABLE = MKBETAG('B','R','D',' '), 
+	   AV_DEV_TO_APP_BUFFER_WRITABLE = MKBETAG('B','W','R',' '), 
+	   AV_DEV_TO_APP_MUTE_STATE_CHANGED = MKBETAG('C','M','U','T'), 
+	   AV_DEV_TO_APP_VOLUME_LEVEL_CHANGED = MKBETAG('C','V','O','L') 
+	} 
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】函数
+	unsigned  avdevice_version (void) 				// 返回LIBAVDEVICE_VERSION_INT 
+	const char *  avdevice_configuration (void) 	// 返回libavdevice构建时的配置
+	const char *  avdevice_license (void)			// 返回avdevice_license
+	void  avdevice_register_all (void) 				// 初始化avdevice并且注册所有输入输出设备
+	AVInputFormat *  av_input_audio_device_next (AVInputFormat *d) 		// 音频输入设备迭代器
+	AVInputFormat *  av_input_video_device_next (AVInputFormat *d)   	// 视频输入设备迭代器
+	AVOutputFormat *  av_output_audio_device_next (AVOutputFormat *d) 	// 音频输出设备迭代器
+	AVOutputFormat *  av_output_video_device_next (AVOutputFormat *d) 	// 视频输出设备迭代器
+	
+	/*  1.从app发送控制消息到设备
+		2.从设备发送控制消息到app 
+	*/
+	int  avdevice_app_to_dev_control_message (struct AVFormatContext *s, enum AVAppToDevMessageType type, void *data, size_t data_size) 
+	int  avdevice_dev_to_app_control_message (struct AVFormatContext *s, enum AVDevToAppMessageType type, void *data, size_t data_size) 
+	
+	/*	创建/释放 avdevice */
+	int  avdevice_capabilities_create (AVDeviceCapabilitiesQuery **caps, AVFormatContext *s, AVDictionary **device_options) 
+	void  avdevice_capabilities_free (AVDeviceCapabilitiesQuery **caps, AVFormatContext *s) 
+	
+	/*  avdevice设备列表 */
+	int  avdevice_list_devices (struct AVFormatContext *s, AVDeviceInfoList **device_list) 
+	
+	void  avdevice_free_list_devices (AVDeviceInfoList **device_list) 
+	int  avdevice_list_input_sources (struct AVInputFormat *device, const char *device_name, AVDictionary *device_options, AVDeviceInfoList **device_list) 
+
+
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第一章	libavformat
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+【一】概述
+	①使用该模块应该先调用下面两个函数
+		av_register_all（）	// 注册所有已经编译的流合并器与流分解器(muxers, demuxers),和协议
+		avformat_network_init（）。// 初始化网络功能
+	②作用
+		1.Libavformat（lavf）是一个处理各种媒体容器格式的库。
+		2.主要两个目的是解复用 - 即将媒体文件拆分成组件流，以及复用的逆过程 - 以指定的容器格式写入提供的数据。
+		3.它还有一个I / O模块，它支持许多用于访问数据的协议（例如file，tcp，http等）。
+	③支持的输入/输出格式
+		1.支持的输入格式由AVInputFormat结构描述
+		2.支持的输出格式由AVOutputFormat描述。
+		3.av_oformat_next（）函数迭代所有已注册的输入/输出格式。
+		4.只能使用avio_enum_protocols（）函数获取支持的协议的名称。
+	④流合并器与流分解器
+		1.用于流合并器与流分解器的主要结构是AVFormatContext, 它导出有关正在读取或写入的文件的所有信息
+		2.不能在堆栈上或直接使用av_malloc（）进行分配AVFormatContext
+		3.要创建AVFormatContext，请使用avformat_alloc_context（）
+	⑤AVFormatContext的重要包含
+		• 输入或输出格式。它可以自动检测，也可以由用户设置输入;始终由用户设置输出。
+		• AVStream数组，描述存储在文件中的所有基本流。 AVStream通常使用此数组中的索引来引用。
+		• I/O上下文。它由lavf打开或由用户设置输入，总是由用户设置输出（除非你正在处理AVFMT_NOFILE格式）。
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】数据结构
+	
+    typedef struct AVStream {
+        AVCodecContext *codec;			/* 已经弃用该接口, 用codecpar代替 */
+        int index;    					/* 在streams数组中的索引: 0. 1. 2... */
+        int id;							// 特定格式的stream id。
+        AVCodecParameters *codecpar;	/* 编码器参数 */
+	    AVRational time_base;			/* 流时间基数 = 1 / 精度 */
+	    int64_t duration;				// 流时长, 总时长 = duration/time_base 秒
+        AVRational avg_frame_rate;		/* 视频的帧率 */
+
+	    struct AVFrac pts;
+        int64_t start_time;				// 解码: 流显示序列中的第一帧pts时间，基于流时间（in stream time base.）。
+        int64_t nb_frames;          	// 表示该流的已知帧数
+        int disposition; 				/**< AV_DISPOSITION_* 推荐比特字段 */
+        AVRational sample_aspect_ratio; /* 采样率(如果未知，该值为0)
+		ionary *metadata; 				//元数据信息  
+    } AVStream;
+	
+	// AVIOContext是FFmpeg用于管理输入输出数据的结构体
+	struct AVIOContext {
+		const AVClass *av_class; 
+		unsigned char *buffer; 		// 缓存开始位置。
+		int  buffer_size; 			// 缓冲区的大小。
+		unsigned char *buf_ptr; 	// 当前指针在缓冲区中的位置，即当前指针读取到的位置
+		unsigned char *buf_end; 	// 缓存结束的位置
+		void *opaque; 				// 一个私有指针，传递给read / write / seek / ...函数
+		int(*read_packet )(void *opaque, uint8_t *buf, int buf_size); 	// 读取包
+		int(*write_packet )(void *opaque, uint8_t *buf, int buf_size); 	// 写入包
+		int64_t(*seek )(void *opaque, int64_t offset, int whence); 		// 
+		int64_t  pos; 				// 当前缓冲区在文件中的位置。
+		int  must_flush; 			// 如果下一次seek需要刷新则为真。
+		int  eof_reached; 			// 是否读到eof，文件结尾
+		int  write_flag; 			
+		int  max_packet_size; 		
+		unsigned long  checksum; 	
+		unsigned char *checksum_ptr 	
+		unsigned long(*update_checksum )(unsigned long checksum, const uint8_t *buf, unsigned int size); 
+		int  error;
+		int(*read_pause)(void *opaque, int pause)  // 暂停或恢复播放网络流媒体协议 - 例如 MMS
+		int64_t(*  read_seek )(void *opaque, int stream_index, int64_t timestamp, int flags) // 使用指定的stream_index查找流中给定的时间戳（对于不支持寻找字节位置的网络流协议）。
+		int  seekable; 
+		int64_t  maxsize; 
+		int  direct; 
+		int64_t  bytes_read; 
+		int  seek_count; 
+		int  writeout_count; 
+		int  orig_buffer_size; 
+		int  short_seek_threshold; 
+		const char *  protocol_whitelist; 
+		const char *  protocol_blacklist; 
+		int(*  write_data_type )(void *opaque, uint8_t *buf, int buf_size, enum AVIODataMarkerType type, int64_t time) 
+		int  ignore_boundary_point; 
+		enum AVIODataMarkerType  current_type; 
+		int64_t  last_time; 
+		int(*  short_seek_get )(void *opaque); 
+		int64_t  written; 
+		unsigned char *  buf_ptr_max; 
+		int  min_packet_size; 
+	}
+	
+	// 多媒体输入容器
+	struct AVInputFormat {
+		const char *name;			// 比如: dshow 
+		const char *long_name; 		// 比如: DirectShow capture 
+		int  flags; 
+		const char *extensions ;	// 文件扩展名
+		const struct AVCodecTag *;  // 一个模拟类型列表.用来在probe的时候check匹配的类型。
+		const *codec_tag; 
+		const AVClass *  priv_class; 
+		const char *  mime_type; 
+		struct AVInputFormat * next; 
+		int  raw_codec_id; 
+		int  priv_data_size; 				// 标示具体的文件容器格式对应的Context 的大小
+		int(*  read_probe )(AVProbeData *); //判断一个给定的文件是否有可能被解析为这种格式。 给定的buf足够大，所以你没有必要去检查它，除非你需要更多 。
+		int(*  read_header )(struct AVFormatContext *);  				 // 读取format头并初始化AVFormatContext结构体，如果成功，返回0。创建新的流需要调用avformat_new_stream
+		int(*  read_packet )(struct AVFormatContext *, AVPacket *pkt);   // 读取一个数据包并将其放在“pkt”中。 pts和flag也被设置
+		int(*  read_close )(struct AVFormatContext *); 					 // 关闭流。 AVFormatContext和Streams不会被此函数释放
+		int(*  read_seek )(struct AVFormatContext *, int stream_index, int64_t timestamp, int flags); 
+		int64_t(*  read_timestamp )(struct AVFormatContext *s, int stream_index, int64_t *pos, int64_t pos_limit) //获取stream [stream_index] .time_base单位中的下一个时间戳
+		int(*  read_play )(struct AVFormatContext *);  // 开始/继续播放 - 仅当使用基于网络的（RTSP）格式时才有意义。
+		int(*  read_pause )(struct AVFormatContext *); // 暂停播放 - 仅当使用基于网络的（RTSP）格式时才有意义。
+			//寻求时间戳ts
+		int(*  read_seek2 )(struct AVFormatContext *s, int stream_index, int64_t min_ts, int64_t ts, int64_t max_ts, int flags); 
+			返回设备列表及其属性。
+		int(*  get_device_list )(struct AVFormatContext *s, struct AVDeviceInfoList *device_list); 
+		int(*  create_device_capabilities )(struct AVFormatContext *s, struct AVDeviceCapabilitiesQuery *caps);//初始化设备能力子模块。
+		int(*  free_device_capabilities )(struct AVFormatContext *s, struct AVDeviceCapabilitiesQuery *caps);  // 释放设备能力子模块。
+	}			
+
+	struct AVFormatContext {
+		const AVClass *  av_class;
+		AVIOContext *pb; 					// 用于读取当前媒体"文件"(广义)的I/O通道
+		char  filename [1024]； 			// 广义上的“文件名”: 比如"video=HD USB Camera"."1.MP3".或者流媒体名。 通过avformat_open_input会将打开的文件名存在这儿
+		struct AVInputFormat *iformat;		// 输入格式容器, 存储AVIOContext操作的数据，用于分流,通过avformat_open_input()函数来设置。
+		struct AVOutputFormat *oformat;		// 输出格式容器, 存储AVIOContext操作的数据, 用于合流, 必须在avformat_write_header()调用前设置。 
+		AVStream **streams; 				// 流索引数组(音.视.字)
+		int64_t  duration； 				// 媒体文件时长,以AV_TIME_BASE为时间基数(一般为一百万.微妙)
+		int64_t  bit_rate； 				// 码率(bps), 清晰度
+		void *  priv_data; 
+		int  ctx_flags; 
+		unsigned int  nb_streams; 			// 当前媒体中流的个数(音.视.字)
+		int64_t  start_time； 
+		unsigned int  packet_size； 
+		int  max_delay;
+	}
+	
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】流分解器模块(Demuxing)
+①概述
+	[1]作用: 用于读取媒体文件并拆分为数据包
+	[2]打开一个媒体文件
+		const char    *url = "file:in.mp3";
+		AVFormatContext *s = NULL;
+		avformat_open_input(&s, url, NULL, NULL);
+	[3]预先告知文件格式,然后打开
+		AVDictionary *options = NULL;av_dict_set(&options, "video_size", "640x480", 0);
+		av_dict_set(&options, "pixel_format", "rgb24", 0);
+		avformat_open_input(&s, url, NULL, &options) 
+	[4]从AVFormatContext中读取数据包
+		av_read_frame（）
+	[5]解码数据包
+		avcodec_send_packet（）
+		avcodec_decode_subtitle2（）
+		// 如果已知，将设置AVPacket.pts，AVPacket.dts和AVPacket.duration时序信息。	
+		
+②数据结构
+	
+③函数
+	/* 根据short_name发现一个输入格式 */ 
+	AVInputFormat *  av_find_input_format (const char *short_name) 		
+	AVInputFormat *  av_probe_input_format (AVProbeData *pd, int is_opened) 
+	AVInputFormat *  av_probe_input_format2 (AVProbeData *pd, int is_opened, int *score_max) 
+	AVInputFormat *  av_probe_input_format3 (AVProbeData *pd, int is_opened, int *score_ret) 
+	int  av_probe_input_buffer2 (AVIOContext *pb, AVInputFormat **fmt, const char *url, void *logctx, unsigned int offset, unsigned int max_probe_size) 
+	int  av_probe_input_buffer (AVIOContext *pb, AVInputFormat **fmt, const char *url, void *logctx, unsigned int offset, unsigned int max_probe_size) 
+	
+	/*	// 指定打开的参数, 打开流媒体(rtsp rtmp http...本地文件)
+		参数：
+			ps：  媒体上下文， 可以传入NULL，让系统分配。
+			url： 文件名，输入设备名， url
+			fmt： 指出输入的格式。
+				如果fmt不为空，系统将使用fmt来解析打开的url
+				如果fmt为空, 系统将自动探测url的格式并打开(推荐)				
+			options： 通过av_dict_set设置打开url的参数, 参考ffmpeg源码中的libavformat/options_table.h；
+				比如: 指定以tcp打开流				
+					av_dict_set(&opts, "rtsp_transport", "tcp", 0);
+					av_dict_set(&opts, "max_delay", "500", 0);	// 设置网络延迟
+					将opts传入options
+		说明：
+			1.该函数会打开IO， 并初始化ps中的AVIOContext结构体 和 输入媒体容器AVInputFormat。
+			2.调用输入容器fmt中的read_header函数读取/保存输入媒体中的流信息, 并且记录流使用的编码器。
+			3.如果输入时文件,我们不应该设置fmt,让系统探测文件格式。如果输入为捕获设备，应该设置fmt。
+	*/
+	int  avformat_open_input (AVFormatContext **ps, const char *url, AVInputFormat *fmt, AVDictionary **options) 
+	
+	avformat_close_input(...)	// 关闭输入上下文
+
+	/*	读取文件头和多媒体中的流信息, 并填充AVFormatContext中的流数组streams */
+	int  avformat_find_stream_info (AVFormatContext *ic, AVDictionary **options) 
+	AVProgram *  av_find_program_from_stream (AVFormatContext *ic, AVProgram *last, int s) 
+	void  av_program_add_stream_index (AVFormatContext *ac, int progid, unsigned int idx) 
+	int  av_find_best_stream (AVFormatContext *ic, enum AVMediaType type, int wanted_stream_nb, int related_stream, AVCodec **decoder_ret, int flags) 
+	
+	/* 调用s里面的iformat容器里面的read_packet函数, 来读取一帧,并填充pkt */
+	int  av_read_frame (AVFormatContext *s, AVPacket *pkt) 
+	
+	/* 用于拖动视频播放进度, timestamp是需要移动到的时间戳。对于视频必须移动到关键帧上，否则不能解码。一般seek视频
+		flags：一般用AVSEEK_FLAG_BACK_WARD(向填入的位置的更早时间进行seek) | AV_SEEK_FLAG_FRAME(表示找关键帧)
+		
+	*/	
+	int  av_seek_frame (AVFormatContext *s, int stream_index, int64_t timestamp, int flags) 
+	int  avformat_seek_file (AVFormatContext *s, int stream_index, int64_t min_ts, int64_t ts, int64_t max_ts, int flags) 
+	int  avformat_flush (AVFormatContext *s); 
+	int  av_read_play (AVFormatContext *s);
+	int  av_read_pause (AVFormatContext *s);
+	
+	/* 功能: 打印有关输入/输出格式上下文的详细信息: 例如 *持续时间，比特率，流，容器，程序，元数据，边数据，*编解码器和时基。
+		.ic			// 要分析的上下文
+		//.index		// 要分析的流索引(这个参数没有实际的用处), 可以传-1
+		//.url		// 源/目标.的文件/地址(这个参数无用), 可以传NULL
+		.is_output	// 输入格式上下文为0, 输出格式上下文为1 */
+	void av_dump_format(AVFormatContext *ic, int index,  const char *url,  int is_output);
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】I/O Read/Write 模块
+①概述
+②函数
+	/* 调用了ffurl_open()和ffio_fdopen()函数来填充AVIOContext结构,包括(读写方法,读写协议,等等) */
+	int  avio_open(AVIOContext **s, const char *url, int flags) 
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】流合并器器模块(Muxing)
+①概述
+	/*	1. 调用init_muxer(AVFormatContext *s, AVDictionary **options)初始化s中的合并器，斌写入私有数据options。
+	 *	2.调用AVFormatContext->oformat->write_header()函数： 如果是flv流将调用flv_write_header（AVFormatContext *s）
+	 */
+	int avformat_write_header(AVFormatContext *s, AVDictionary **options);
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】Internal模块
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】Core functions
+	unsigned  avformat_version (void); 
+	const char *avformat_configuration (void); 
+	const char *avformat_license (void); 
+	int  avformat_network_init (void); 
+	int  avformat_network_deinit (void); 
+	const AVOutputFormat *av_muxer_iterate (void **opaque); 
+	const AVInputFormat *av_demuxer_iterate (void **opaque); 
+	AVFormatContext *  avformat_alloc_context (void); 
+	void  avformat_free_context (AVFormatContext *s); 
+	const AVClass *  avformat_get_class (void); 
+	
+	/*	功能: 为s分配一个流
+	 *		1.如果流的解码器已知, AVCodec为流的解码器
+	 *		2.如果流的解码器未知, 则填入NULL, 然后用avcodec_parameters_from_context函数去填充AVStream->codecpar字段
+	 *			如果AVCodec为NULL, 那么应该将AVCodecParameters->codec_tag字段设置为0;
+	 */	
+	AVStream *  avformat_new_stream (AVFormatContext *s, const AVCodec *c); 
+	
+	
+	int  av_stream_add_side_data (AVStream *st, enum AVPacketSideDataType type, uint8_t *data, size_t size); 
+	
+	/* 为frame分配空间
+	 *  .frame必须要预先填充宽度.高度.像素格式
+	 *  .align为对其的字节数
+	 */
+	int av_frame_get_buffer(AVFrame *frame, int align);
+	
+	/*   功能: 创建一个输出格式上下文
+	 *	  .ctx: 		函数调用成功之后创建的AVFormatContext结构体。
+	 *	  .oformat:		指定输出容器。 如果为NULL就必须指定format_name或filename或者2者，并且会填充ctx->oformat成员
+	 *	  .format_name:	输出容器的存储格式：对于流媒体可以填“flv”， 对于飞流媒体可以填“mpegts”
+	 *	  .filename:	指定输出文件的名称或url
+	 */
+	int avformat_alloc_output_context2(AVFormatContext **ctx, ff_const59 AVOutputFormat *oformat,
+									   const char *format_name, const char *filename);
+	 
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第一章	libavcodec
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+【一】概述
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】数据结构 
+	// 描述一帧原始 音频/视频
+	typedef struct AVFrame {
+		// 帧数据中元素的位置数组
+		uint8_t *data[AV_NUM_DATA_POINTERS]：
+		// 帧数据中元素的一行长度(包含对其字节)数组
+		int linesize[AV_NUM_DATA_POINTERS]：	
+		int width, height：			// 视频帧宽和高（1920x1080,1280x720...）
+		int nb_samples：			// 单通道样本数量(音频)
+		int64_t pts：				// 显示时间戳
+		int64_t pkt_dts;			// 包中的dts
+		int format：				// 解码后原始数据类型（YUV420，YUV422，RGB24...）
+		int key_frame：				// 是否是关键帧
+		int sample_rate;			// 音频采样率
+		int64_t channel_layout;		// 音频通道布局
+		int channels;				// 音频通道数
+		enum AVPictureType pict_type：// 帧类型（I,B,P...）
+		AVRational sample_aspect_ratio：宽高比（16:9，4:3...）
+	}AVFrame;
+		// 说明
+		①data[AV_NUM_DATA_POINTERS]
+			1.对于YUV420P平面储存
+				linesize[0] = Y数据地址
+				linesize[1] = U数据地址
+				linesize[2] = V数据地址
+				linesize[3] = NULL
+			2.对于BRG24交叉存储
+				linesize[0] = BRGBRGBRG...
+				linesize[1] = NULL
+		②linesize[AV_NUM_DATA_POINTERS]
+			与data中的向一一对应, 表示某个数据一行的大小(包括对其)
+				
+			
+				
+			
+	// 描述从输入源中读取的一个数据包
+	typedef struct AVPacket {
+		AVBufferRef *buf;	// 用来管理data指针的引用计数
+		int64_t pts;		// 显示时间戳, 相应的时间基数为AVStream->time_base。
+		int64_t dts;		// 解码时间戳, 相应的时间基数为AVStream->time_base。
+		uint8_t *data;		// 指向保存压缩数据的指针，这就是AVPacket的实际数据。
+		int   size;			// data的大小
+		int   stream_index;	// packet在streams中的index位置
+		int   flags;		// flags: （int）标示，结合AV_PKT_FLAG使用，其中最低为1表示该数据是一个关键帧。
+		AVPacketSideData *side_data;	// 容器提供的一些附加数据
+		int side_data_elems;
+		int64_t duration;	// 数据的时长，以所属媒体流的时间基准为单位，未知则值为默认值0
+		int64_t pos;        // 数据在流媒体中的位置，未知则值为默认值-1
+		attribute_deprecated
+		int64_t convergence_duration;
+	} AVPacket;
+	
+	// 包含一个编解码器和编解码器使用的参数
+	struct AVCodecParameters {
+		enum AVMediaType codec_type; 　　　		// 编码类型。说明这段流数据究竟是音频还是视频。
+		enum AVCodecID codec_id;     　　　　 	// 编码格式。说明这段流的编码格式，h264，MPEG4, MJPEG，etc...
+		uint32_t  codecTag;                   　// 一般不用
+		int format;                             // 格式。对于视频来说指的就是像素格式(YUV420,YUV422...)，对于音频来说，指的就是音频的采样格式。
+		int width, int height;                  // 视频的宽高，只有视频有
+		uint64_t channel_layout;             　 // 取默认值即可
+		int channels;                           // 声道数
+		int sample_rate;                    　　// 样本率
+		int frame_size;                         // 只针对音频，一帧音频的大小
+		bits_per_coded_sample;					// 每个样本用多少位表示, 比如24
+		enum AVFieldOrder field_order;			// 仅视频。 隔行扫描视频中字段的顺序。
+		int   frame_size;						// 仅音频, 帧大小。
+		int   block_align;						// 对其: Corresponds to nBlockAlign in WAVEFORMATEX.
+	}AVCodecParameters;
+
+	// 描述一个编解码器
+	struct AVCodec {
+		enum AVMediaType type;	// 指明了编码器的类型，是视频，音频，还是字幕
+		int format;				// 样本格式。 对于视频是像素格式(AVPixelFormat); 对于音频(AVSampleFormat)是样本格式。
+		const char *name;		// 编解码器的名字，比较短。在编码器和解码器之间是全局唯一的。 这是用户查找编解码器的主要方式。
+		const char *long_name;	// 编解码器的名字，全称，比较长。
+		enum AVCodecID id;		// 编解码器唯一标识
+		uint64_t channel_layout;			// 通道布局类型, 可通过av_get_default_channel_layout来获取系统的默认值
+		int channels;			// 音频通道数
+		int sample_rate;		// 音频的采样率
+		int frame_size;			// 单通道样本数量
+	}AVCodec;
+	// 描述一个编解码器及其参数
+	struct AVCodecContext {
+		enum AVMediaType codec_type; 	// 编解码器的类型（视频，音频...）。比如: AVMEDIA_TYPE_VIDEO
+		const struct AVCodec  *codec; 	// 采用的解码器AVCodec（H.264,MPEG2...）。
+		AVRational time_base;			// 时间基数, 以秒为单位, 应该 = 1/fps
+	   /*	可通过设置下面的选项来让编解码器提速
+		* av_opt_set(vc->priv_data, "preset", "superfast", 0); //设置priv_data的option
+		* av_opt_set(vc->priv_data, "tune", "zerolatency", 0); //设置priv_data的option	*/
+		void *priv_data;				// 编解码器的私有属性, 非常重要。
+		int  gop_size;					// 关键帧的周期， 不宜过大，也不宜过小， 一般为50
+		int  max_b_frames;				// 两个非B桢之间的最大B帧数目, 由于b帧需要依赖于后面一个I帧, 所以max_b_frames部位0时,视频将有延迟, 所以一般设置为0
+		AVRational framerate;			// 帧率fps
+		int64_t bit_rate;				// 码率（可以理解为清晰度）。越大编码后的视频越清晰。
+		enum AVCodecID  codec_id;		// 编解码id
+		int decoderCtx->thread_count;	// 用于解码的线程数
+		int flags;						// 标记			
+		int delay;						// 从编码器输入/出到解码器输出的帧延迟数, 设置为0。
+		int width, height;				// 代表宽和高（仅视频）。
+		int refs;						// 运动估计参考帧的个数（H.264的话会有多帧，MPEG2这类的一般就没有了）。
+		int sample_rate; 				// 采样率（仅音频）。
+		int channels; 					// 声道数（仅音频）。
+		enum AVSampleFormat sample_fmt; // 音频采样格式，编码：由用户设置。解码：由libavcodec设置。
+		int frame_size;					// 音频帧中每个声道的采样数。编码：由libavcodec在avcodec_open2（）中设置。 解码：可以由一些解码器设置以指示恒定的帧大小.
+		int frame_number;				// 帧计数器，由libavcodec设置。解码：从解码器返回的帧的总数。编码：到目前为止传递给编码器的帧的总数。
+		uint64_t channel_layout;		// 音频声道布局。编码：由用户设置。解码：由用户设置，可能被libavcodec覆盖。
+		enum AVAudioServiceType audio_service_type;//音频流传输的服务类型。编码：由用户设置。解码：由libavcodec设置。
+	}AVCodecContext;
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【三】 codecs模块
+  Native Codecs 
+  External library wrappers 
+  Hardware Accelerators bridge 
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【四】 Decoding模块 
+①描述
+②函数
+		// 找到一个能解析codec_id编码格式的解码器
+	AVCodec *avcodec_find_decoder (enum AVCodecID id) 	   
+		// 找到一个能解析codec_id编码格式的解码器(找硬解码器中可以使用这个)
+	AVCodec *avcodec_find_decoder_by_name (const char *name) 
+		// 分配一个编解码器上下文
+	AVCodecContext *avcodec_alloc_context3(const AVCodec *codec);
+	avcodec_free_context3(AVCodecContext **)
+	int  avcodec_default_get_buffer2 (AVCodecContext *s, AVFrame *frame, int flags) 
+
+	------------------------------------------------------------------------------------------------
+		/* 将frame放入编码器avctx的编码队列 */
+	int  avcodec_send_frame (AVCodecContext *avctx, const AVFrame *frame) 
+		/* 	从编码器avctx的编码队列中读取一个数据包avpkt */
+	int  avcodec_receive_packet (AVCodecContext *avctx, AVPacket *avpkt) 
+	------------------------------------------------------------------------------------------------
+		/* 	将一个数据包放入解码器avctx中解码队列 */
+	int  avcodec_send_packet (AVCodecContext *avctx, const AVPacket *avpkt) 
+		/*	从解码器avctx的解码队列中读取一帧, 填充到frame中 */
+	int  avcodec_receive_frame(AVCodecContext *avctx, AVFrame *frame) 
+	注意:
+		1.解码的avpkt中可能含有多帧数据, 因此要多次调用avcodec_receive_frame函数。
+		2.解码队列有缓存，必须向avcodec_send_packet函数中传入NULL， 然后多次调用avcodec_receive_frame才能取出全部缓存数据
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【五】 Decoding模块 
+【六】 Internal模块 
+【七】 send/receive encoding and decoding API overview模块 
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【八】 Core functions/structures模块 
+	av_init_packet (AVPacket *pkt)			// 将pkt中的参数设置为默认值
+	av_packet_alloc(void)					// 创建包,并初始化。
+	av_packet_clone(const AVPacket *src)	// 创建一个包,数据指向src中的数据。数据引用计数+1
+	av_packet_ref(AVPacket *dts, const AVPacket *src) // 相当于av_packet_clone
+	av_packet_unref(AVPacket *pkt)			// pkt中数据的引用计数-1
+	av_packet_free(AVPacket **pkt);			// 清空对象并引用计数-1
+	av_packet_from_data()
+	
+	AVFrame *frame = av_frame_alloc();	// 分配
+	av_frame_free(AVFrame **);			// 释放
+	av_frame_ref(AVFrame *dst, const AVFrame *src) // 拷贝AVFrame,但帧数据共用
+	av_frame_unref(AVFrame *);			// 帧数据引用基数-1	
+	AVFrame *av_frame_clone(const AVFrame *src);   // 类似于av_frame_ref
+	AVCodecParameters *  avcodec_parameters_alloc (void) 
+	void  avcodec_parameters_free (AVCodecParameters **par) 
+	int  avcodec_parameters_copy (AVCodecParameters *dst, const AVCodecParameters *src)； 
+	void  avcodec_free_context (AVCodecContext **avctx) 
+	/* 分配一个AVCodecContext,  AVCodecContext->codec指向codec */
+	AVCodecContext *  avcodec_alloc_context3 (const AVCodec *codec) 
+	unsigned  avcodec_version (void) 			// 返回ffmpeg版本
+	const char *  avcodec_configuration (void)  // 返回ffmpeg编译的配置信息
+	const char *  avcodec_license (void) 		//  返回ffmpeg的执照
+	
+	/* 功能: 从编解码上下文ctx中提取出编解码参数,并填充到par中。 */
+	int  avcodec_parameters_from_context (AVCodecParameters *par, const AVCodecContext *ctx)；
+	/* 功能: 用编解码参数结构par中的值,去填充ctx中对应的字段, 未对应的字段不受影响 */
+	int  avcodec_parameters_to_context (AVCodecContext *ctx, const AVCodecParameters *par)； 
+	int  avcodec_open2 (AVCodecContext *avctx, const AVCodec *codec, AVDictionary **options)； 
+	int  avcodec_close (AVCodecContext *avctx)； 
+	void  avsubtitle_free (AVSubtitle *sub)； 
+	
+	/*	将数据包pkt写入, 格式上下文s中, 并确保正确交错(数据包按顺序正确交错增加dts) */
+	int av_interleaved_write_frame(AVFormatContext *s, AVPacket *pkt);
+
+ 
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第一章	libswscale (视频转换模块)
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+【一】概述
+	①功能
+		1.图像色彩空间转换
+		2.分辨率缩放
+		3.前后图像滤波处理
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】数据结构
+	// 转换器上下文, 描述一个音视频的格式,尺寸,色域,滤波转换的转换器
+	struct SwsContext{
+		const AVClass *av_class; 
+		SwsFunc  swscale; 
+		int  srcW; 		// Width of source luma/alpha planes
+		int  srcH; 
+		int  dstH; 
+		int  chrSrcW; 
+		int  chrSrcH; 
+		int  chrDstW; 
+		int  chrDstH; 
+		enum AVPixelFormat  srcFormat; 
+		enum AVPixelFormat  dstFormat; 
+		int  src0Alpha; 
+		int  dst0Alpha; 
+		int  dstFormatBpp;
+		int  srcFormatBpp;
+		int  dstY;
+		int  dstW; 
+		int  flags;
+		double  param[2];
+	}SwsContext;
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【三】函数
+	/*	目的: 从缓冲区中读取一个转换器上下文。
+				1.当输入输出变化时，context能自动随之改变
+				2.当context为空时会自行创建
+		.srcW：			源图像的宽
+		.srcH：			源图像的高
+		.srcFormat： 	源图像的像素格式。 opencv读出的帧转化为了BRG24
+		.dstW：			目标图像的宽
+		.dstH：			目标图像的高
+		.dstFormat：	目标图像的像素格式
+		.flags：		设定图像拉伸使用的算法: 
+							编码/解码 一般用：SWS_BICUBIC	
+							格式转换一般用： SWS_FAST_BILINEAR
+		最后三个参数用不到, 传NULL或0
+	*/
+	struct SwsContext* sws_getCachedContext (struct SwsContext *context,  
+												  int  srcW,  int  srcH,  enum AVPixelFormat  srcFormat,  
+												  int  dstW,  int  dstH,  enum AVPixelFormat  dstFormat,  
+												  int  flags,  
+												  SwsFilter *srcFilter,  SwsFilter *stFilter, const double *  param)  
+	-----------------------------------------------------------------------------------------------------------------
+	/*	目的: 根据转换器c的参数, 转换一帧数据。
+		.c：			源图像的宽
+		.srcSlice[]：		// 用于描述源数据的地址, 是一个指针数组(长度为AV_NUM_DATA_POINTERS)
+			/*  1.对于普通的RGB格式: 
+					1.RGB数据会采取交错存放格式。 
+					2.所有RGB数据都会交错的存放在一起。
+					3.我们只需要在srcSlice[0]上填入帧数据的起始位置即可。
+				2.对于YUV420p格式 :
+					1.Y.U.V数据会采取平面存放形式(先存完Y,再存完U,在存完V)
+					2.Y.U.V三种数据会分开存放在一段空间里面
+					3.我们需要在srcSlice[0]的位置上填入Y数据段的起始地址
+								srcSlice[1]的位置上填入U数据段的起始地址
+								srcSlice[2]的位置上填入V数据段的起始地址
+			*/
+		.srcStride[]： 	// 用于描述源数据实际一行的字节数(为了说明对其的字节数), 是一个int数组(长度为AV_NUM_DATA_POINTERS)
+			/*  1.对于普通的RGB格式: 
+					1.RGB数据会采取交错存放格式。 
+					2.所有RGB数据都会交错的存放在一起。
+					3.我们只需要在srcSlice[0]上填入对其后的一行的字节数,
+						对于opencv转换后输出的BRG24, 是以24字节对齐的。
+				2.对于YUV420p格式 :
+					1.Y.U.V数据会采取平面存放形式(先存完Y,再存完U,在存完V)
+					2.Y.U.V三种数据会分开存放在一段空间里面
+					3.我们需要在srcSlice[0]的位置上填入存储Y数据段的一行的字节数（对其后）
+								srcSlice[1]的位置上填入存储Y数据段的一行的字节数（对其后）
+								srcSlice[2]的位置上填入存储Y数据段的一行的字节数（对其后）
+			*/
+		.srcSliceY：  	表示从哪一个位置开始处理输入帧， 填入0表示处理整帧图像
+		.srcSliceH：  	输入图像的高度
+		.dst[]：		输出图像的数据位置, 与srcSlice[]的设置方法一样
+		.dstStride[]：  输出图像对其后一行的字节数, 有系统内部进行计算
+	*/
+	int sws_scale(struct SwsContext *c,
+				  const uint8_t *const srcSlice[], const int srcStride[],
+				  int srcSliceY, int srcSliceH,
+				  uint8_t *const dst[], const int dstStride[]);
+	-----------------------------------------------------------------------------------		  
+	void sws_freeContext(struct SwsContext *swsContext);			  
+	-----------------------------------------------------------------------------------	
+	// 调整输出包的时间戳: 将AVStream(bq)表示的时间戳a(包的时间戳)转换为AVCodec(cq)表示的时间戳a(包的时间戳)
+	int64_t av_rescale_q(int64_t a, AVRational bq, AVRational cq) av_const;
+
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第一章	libswresample(音频重采样, 音频格式转换,音频混流模块)
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+
+
+SwrContext *swr_alloc()
+-----------------------------------------------------------------------------------	 
+/* 功能: 分配一个用于(音频重采样和格式转换)的转换器
+		.s:						音频转换器指针
+		.out_ch_layout: 		输出音频的.通道布局: 可以调用av_get_default_channel_layout来获取系统布局 	
+		.out_sample_fmt:		输出音频的.样本格式: qt采集到的音频样本格式为AV_SAMPLE_FMT_S16
+		.out_sample_rate:		输出音频的.采样率
+		// 与输出参数相对应
+		in_ch_layout:					
+		in_sample_fmt:			h264音频编码的输入样本格式要求为 AV_CODEC_ID_AAC
+		in_sample_rate:
+*/
+struct SwrContext *swr_alloc_set_opts (struct SwrContext *s,
+	 int64_t out_ch_layout, enum AVSampleFormat out_sample_fmt, int out_sample_rate, 
+	 int64_t in_ch_layout, enum AVSampleFormat in_sample_fmt, int in_sample_rate, 
+	 int log_offset, void *log_ctx) 
+-----------------------------------------------------------------------------------	 
+int swr_init(struct SwrContext *s)	// 初始化上下文	 
+	 
+-----------------------------------------------------------------------------------	 
+/* 功能: 音频重采样和格式转换
+	s:		// 音频转换器	
+	out:	// 输出数据地址, 是一个uint8_t *data[AV_NUM_DATA_POINTERS]的指针数组, 用来存放转换后的数据
+		1.如果输出后的样本格式为通道数据交错存取,那么只需要在data[0]的位置指出输出buf位置即可
+		2.如果输出后的样本格式为平面存放格式,那么data[0]为第一个通道数据存取位置,data[1]为第二个通道数据位置,以此类推。
+	out_count:	// 单通道样本数量
+	in:		// 输入数据地址, 是一个uint8_t *data[AV_NUM_DATA_POINTERS]的指针数组, 用来指定输入数据
+		1.如果输入的样本格式为通道数据交错存取,那么只需要在data[0]的位置指出输入buf位置即可
+		2.如果输入的样本格式为平面存放格式,那么data[0]为第一个通道数据存取位置,data[1]为第二个通道数据位置,以此类推。
+	in_count:	// 单通道样本数量
+*/
+int  swr_convert (struct SwrContext *s, 
+		uint8_t **out, int out_count, 
+		const uint8_t **in, int in_count) 
+-----------------------------------------------------------------------------------	 
+void swr_free(struct SwrContext **s)	// 释放
+
+-------------------------------------------------------------------------------------------------------------------
+
+	
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第一章	ffmpeg控制
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+【一】ffmpeg初始化
+	avdevice_register_all();	// 注册所有设备
+	avcodec_register_all();		// 注册所有编解码器
+	av_register_all();		
+	avformat_network_init();	// 注册所有网络模块
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】opencv设置摄像头的采集参数, 
+	注意: 一定要在这儿调试好采集到的数据后,才允许推流。
+	VideoCapture camera;
+	camera.open(CAP_ANY);			// 让系统自动探测摄像头的类型
+	camera.set(CV_CAP_PROP_FOURCC, CV_FOURCC('M', 'J', 'P', 'G'));
+	camera.set(CV_CAP_PROP_FRAME_WIDTH, 1920);  //宽度 
+	camera.set(CV_CAP_PROP_FRAME_HEIGHT, 1080); //高度
+	//camera.set(CV_CAP_PROP_FPS, 30);			// 帧率, 设置后摄像头有延迟
+	//camera.set(CV_CAP_PROP_FORMAT, CV_YUV420p2BGR);//高度
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【三】控制视频编码后的清晰度
+	① 码率越大, 编码后的视频越清晰
+		AVCodecContext->bit_rate;		//码率（可以理解为清晰度）, 单位为b
+	②设置合适的Gop
+		AVCodecContext->gop_size = 50;	// 关键帧会影响其他帧的质量
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【四】设置h264编码器的参数
+		AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+		vc = avcodec_alloc_context3(codec);			// AVCodecContext
+		av_opt_set(vc->priv_data, "preset", "superfast", 0); //设置priv_data的option
+		av_opt_set(vc->priv_data, "tune", "zerolatency", 0); //设置priv_data的option
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【四】控制.推流后马上就能及时看到推流的视频
+	// 设置合适的GOP
+		AVCodecContext->gop_size = 10;		// B帧和P帧都依赖于I帧才能解析,gop_size太大的话,要等到下一个I帧才能看到视频 
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【四】控制.根据网络状况来设置相应传输视频的清晰度
+	①// 设置合适的GOP
+		AVCodecContext->gop_size = 100;		// GOP越大, I帧间隙越大, 数据量越少
+	②//设置合适的码率
+		AVCodecContext->bit_rate;			//码率（可以理解为清晰度）, 单位为b
+	③选择合适图像转换算法
+		SWS_BICUBIC.. // 可以根据自己去试
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【四】设置.推流延迟优化
+	// 	ffmpeg -re -f dshow -i video="HD USB Camera" -r 30   -fflags discardcorrupt -fflags nobuffer -flags low_delay  -strict experimental -tune zerolatency -vcodec libx264 -preset ultrafast -acodec libfaac -f mpegts udp://172.16.24.169:2000
+	①设置编码器（h264）的参数
+		AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+		vc = avcodec_alloc_context3(codec);			// AVCodecContext
+		av_opt_set(vc->priv_data, "preset", "superfast", 0); //设置priv_data的option
+		av_opt_set(vc->priv_data, "tune", "zerolatency", 0); //设置priv_data的option
+	②降低最大b帧数
+		AVCodecContext->max_b_frames = 0;	// B帧依赖于后一个I帧, 所以max_b_frames越大,延迟越大
+	③设置合适的Gop
+		AVCodecContext->gop_size = 50;		// B帧和P帧都依赖于I帧才能解析, 越大延迟越大
+	④设置合适的用于编解码的线程数
+		AVCodecContext->thread_count = 8;	// 电脑的最大线程数
+	⑤将编解码延迟帧数设置为0
+		vc->delay = 0;
+		
+	⑥优化格式上下文的,交错的最大缓冲持续时间	
+		AVFormatContext->max_interleave_delta = 0;
+		//AVFormatContext->max_delay = 0;
+	⑦选择合适图像转换算法
+		SWS_BICUBIC.. // 可以根据自己去试
+		
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【四】设置.拉流延迟优化
+	ffplay -i rtmp://172.16.24.211/live   -fflags nobuffer -flags low_delay  -strict experimental
+	①选择合适图像转换算法
+
+		SWS_BICUBIC.. // 可以根据自己去试
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【五】设置.音频推流延迟优化
+	// 音频延迟优化
+	AVCodecContext->profile = FF_PROFILE_MPEG2_AAC_HE;
+	
+
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第一章	ffmpeg功能
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+【一】枚举支持的输入/输出设备
+	// ffmpeg -list_devices true -f dshow -i dummy
+    QList<QCameraInfo> cameras = QCameraInfo::availableCameras();//获取当前可用摄像头
+    QList<QAudioDeviceInfo> iaudios = QAudioDeviceInfo::availableDevices(QAudio::AudioInput);
+    QList<QAudioDeviceInfo> oaudios = QAudioDeviceInfo::availableDevices(QAudio::AudioOutput);
+    /* captuers */
+    for (int i=0; i < cameras.size(); i++) {
+         qDebug()<<cameras.at(i).description();
+    }
+    qDebug()<<"input audios";
+    for (int i=0; i < cameras.size(); i++) {
+         qDebug()<<iaudios.at(i).deviceName();
+    }
+    qDebug()<<"output audios";
+    for (int i=0; i < cameras.size(); i++) {
+         qDebug()<<oaudios.at(i).deviceName();
+    }
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】ffmpeg抓图
+	int save_pic(const char *path, AVPacket *pkt)
+	{
+		FILE *fp;
+		fp = fopen(path, "wb");
+		fwrite(pkt->data, 1, pkt->size, fp);
+		fclose(fp);
+	}
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【三】opencv实时采集摄像头的数据并显示
+	int opencv_camera_debugging()
+	{
+		Mat mat;
+		VideoCapture camera;
+		namedWindow("video");			// 打开一个名为"video"的系统窗口
+		camera.open(CAP_ANY);			// 让系统自动探测摄像头的类型
+		//camera.open(CAP_DSHOW);
+
+		// 设置摄像头采集的编码方式, 瑞尔威视摄像头支持这种格式
+		camera.set(CV_CAP_PROP_FOURCC, CV_FOURCC('M', 'J', 'P', 'G'));
+		camera.set(CV_CAP_PROP_FRAME_WIDTH, 1920);  //宽度 
+		camera.set(CV_CAP_PROP_FRAME_HEIGHT, 1080); //高度
+		//camera.set(CV_CAP_PROP_FPS, 30);			// 帧率, 设置后摄像头有延迟
+		//camera.set(CV_CAP_PROP_FORMAT, CV_YUV420p2BGR);//高度
+		for (;;) {
+			camera.read(mat);			// 读取一帧, 解码, 并转换为BGR24
+			imshow("video", mat);		// 在"video"窗口中显示frame
+			waitKey(1);					// 刷新界面, 按键是返回
+		}
+		return 0;
+	}
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【三】opencv实时采集音频并播放
+	avcodec_register_all();
+	av_register_all();
+	avformat_network_init();
+
+	//char *outUrl = "rtmp://172.16.24.211/live";
+	char *outUrl = "rtmp://hdlcontrol.com/live/stream";
+	int sampleRate = 44100;
+	int channels = 2;
+	int sampleByte = 2;
+	AVSampleFormat inSampleFmt = AV_SAMPLE_FMT_S16;
+	AVSampleFormat outSampleFmt = AV_SAMPLE_FMT_FLTP;
+
+	///1 qt音频开始录制
+	QAudioFormat fmt;
+	fmt.setSampleRate(sampleRate);
+	fmt.setChannelCount(channels);
+	fmt.setSampleSize(sampleByte * 8); 
+	//  Qt音频的编码方式, 将采集到AV_SAMPLE_FMT_S16格式的音频数据
+	fmt.setCodec("audio/pcm");		
+	fmt.setByteOrder(QAudioFormat::LittleEndian); // 音频数据为小端
+	fmt.setSampleType(QAudioFormat::UnSignedInt); // 样本类型
+	// 获取系统默认的音频设备信息
+	QAudioDeviceInfo info = QAudioDeviceInfo::defaultInputDevice();
+	qDebug() << info.deviceName();
+
+	// 检查我们设置的音频采样格式是否能设置在默认音频设备上
+	if (!info.isFormatSupported(fmt)){
+		cout << "Audio format not support!" << endl;
+		fmt = info.nearestFormat(fmt);
+	}
+	// 创建音频输入接口
+	QAudioInput *input = new QAudioInput(fmt);
+	//开始录制音频
+	QIODevice *io = input->start();
+
+	//2 创建一个将AV_SAMPLE_FMT_S16音频重采样为AV_SAMPLE_FMT_FLTP格式的转换器
+	// AV_SAMPLE_FMT_FLTP是音频编码器AV_CODEC_ID_AAC所需要的格式
+	SwrContext * asc = NULL;
+	asc = swr_alloc_set_opts(asc,
+		av_get_default_channel_layout(channels), outSampleFmt, sampleRate,//输出格式
+		av_get_default_channel_layout(channels), inSampleFmt, sampleRate, 0, 0);//输入格式
+	int ret = swr_init(asc);
+	cout << "音频重采样 上下文初始化成功!" << endl;
+
+
+	///3 音频重采样输出空间分配
+	AVFrame *pcm = av_frame_alloc();
+	pcm->format = outSampleFmt;
+	pcm->channels = channels;
+	pcm->channel_layout = av_get_default_channel_layout(channels);
+	pcm->nb_samples = 1024; //一帧音频一通道的采用数量
+	ret = av_frame_get_buffer(pcm, 0); // 给pcm分配存储空间
+	///4 初始化音频编码器
+	AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_AAC);
+	//音频编码器上下文
+	AVCodecContext *ac = avcodec_alloc_context3(codec);
+	ac->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+	ac->thread_count = 6;
+	ac->bit_rate = 20 * 1024 *8;
+
+	/* 注意: 编码器时间戳 = 1 / 采样率 = 1 / 44100	*/
+	ac->sample_rate = sampleRate;	// 44100
+	ac->sample_fmt = AV_SAMPLE_FMT_FLTP;
+	ac->channels = channels;
+	ac->channel_layout = av_get_default_channel_layout(channels);
+	// 音频延迟优化
+	ac->profile = FF_PROFILE_MPEG2_AAC_HE;
+	//打开音频编码器
+	ret = avcodec_open2(ac, 0, 0);
+	cout << "avcodec_open2 success!" << endl;
+
+
+	///5 输出封装器和音频流配置
+	//a 创建输出封装器上下文
+	AVFormatContext *ic = NULL;
+	ret = avformat_alloc_output_context2(&ic, 0, "flv", outUrl);
+	ic->max_interleave_delta = 0;			// 交叉存取的最大延迟
+	ic->max_delay = 0;
+
+	//b 添加音频流 
+	AVStream *as = avformat_new_stream(ic, NULL);
+	as->codecpar->codec_tag = 0;
+	//从编码器复制参数
+	avcodec_parameters_from_context(as->codecpar, ac);
+	av_dump_format(ic, 0, outUrl, 1);
+
+	///打开rtmp 的网络输出IO
+	ret = avio_open(&ic->pb, outUrl, AVIO_FLAG_WRITE);
+	//写入封装头
+	ret = avformat_write_header(ic, NULL);
+	//一次读取一帧音频的字节数
+	int readSize = pcm->nb_samples*channels*sampleByte;
+	char *buf = new char[readSize];
+	int apts = 0;
+	AVPacket pkt = { 0 };
+	for (;;)	
+	{
+		//一次读取一帧音频
+		if (input->bytesReady() < readSize){
+			QThread::msleep(1);
+			continue;
+		}
+		int size = 0;
+		while (size != readSize){
+			int len = io->read(buf + size, readSize - size);
+			if (len < 0)break;
+			size += len;
+		}
+		if (size != readSize)continue;
+		//重采样源数据
+		const uint8_t *indata[AV_NUM_DATA_POINTERS] = { 0 };
+		indata[0] = (uint8_t *)buf;
+		int len = swr_convert(asc, pcm->data, pcm->nb_samples, //输出参数，输出存储地址和样本数量
+			indata, pcm->nb_samples);
+
+		//pts 运算
+		//  nb_sample/sample_rate  = 一帧音频的秒数sec
+		// timebase  pts = sec * timebase.den
+		pcm->pts = apts;	// 显示时间戳
+
+		// 编码时间戳 = 一帧音频的秒数sec / 编码时间基数
+		//apts += (pcm->nb_samples / sampleRate) / (ac->time_base.num / ac->time_base.den);
+		apts += av_rescale_q(pcm->nb_samples, { 1,sampleRate }, ac->time_base);
+		// 将一帧音频放入编码器队列
+		int ret = avcodec_send_frame(ac, pcm);
+		if (ret != 0)
+			continue;
+
+		// 从编码器队列中取出已经编码的帧
+		ret = avcodec_receive_packet(ac, &pkt);
+
+		cout << pkt.size << " " << flush;
+
+		// 将帧的编码器时间戳转换为流的时间戳
+		pkt.pts = av_rescale_q(pkt.pts, ac->time_base, as->time_base);
+		pkt.dts = av_rescale_q(pkt.dts, ac->time_base, as->time_base);
+		pkt.duration = av_rescale_q(pkt.duration, ac->time_base, as->time_base);
+		ret = av_interleaved_write_frame(ic, &pkt);
+	}
+}
+	
+	
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【四】opencv获取采集到的帧信息
+	VideoCapture cam;
+	cam.open(CAP_ANY);								//  让系统自动探测摄像头的类型
+	int inWidth = cam.get(CAP_PROP_FRAME_WIDTH);	//  获取相机采集到视频的宽度
+	int inHeight = cam.get(CAP_PROP_FRAME_HEIGHT);	//  获取相机采集到视频的高度
+	int fps = cam.get(CAP_PROP_FPS);				//  获取相机采集到视频的fps(帧率)
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【五】opencv读取一帧, 并用ffmpeg转换为AV_PIX_FMT_YUV420P格式, 然后进行H264编码
+	①说明：
+		1.opencv调用read函数读取一帧所做的事情
+			1.采集一帧数据
+			2.将这一帧数据转换为BGR24(24字节对其)
+		2.AV_PIX_FMT_YUV420P是h264压缩所需要的像素格式
+	②代码
+		VideoCapture cam;
+		Mat frame;
+		SwsContext *swsCtx = NULL;
+		AVFrame *outFrame = NULL;
+	
+	/* 1.设置转换后帧的参数,并分配存储空间 */
+	outFrame 		 = av_frame_alloc();
+	outFrame->format = AV_PIX_FMT_YUV420P;
+	outFrame->width  = 转换后图像宽度;
+	outFrame->height = 转换后图像高度;
+	outFrame->pts 	 = 0;					// 时间戳初始化为0
+	outFrame 		 = av_frame_get_buffer(yuv, 32);
+	
+	/* 2.打开摄像头读取一帧并转化BGR24数据, 并读取BGR24帧的参数 */
+		cam.open(CAP_ANY);	
+		cam.read(frame);	
+		int inWidth  = cam.get(CAP_PROP_FRAME_WIDTH);	// 输入图像宽
+		int inHeight = cam.get(CAP_PROP_FRAME_HEIGHT);	// 输入图像高度
+		int fps 	 = cam.get(CAP_PROP_FPS);			// 输入图像FPS
+	
+	/* 3.创建一个图像转换器 */
+	vsc = sws_getCachedContext(swsCtx,	// 被生成的转换器
+								inWidth, inHeight, AV_PIX_FMT_BGR24,		 // 原图像参数	
+								outFrame->width, outFrame->height, AV_PIX_FMT_YUV420P, // 输出图像参数 
+								SWS_BICUBIC,0, 0, 0	);						 // 转换算法,及过滤器
+	
+	/* 4.打开摄像头并读取一帧数据,然后转换为BGR24(24字节对其的图像) */
+	uint8_t *indata[AV_NUM_DATA_POINTERS] = { 0 };	// 数据源(R.G.B./Y.U.V)
+	int	insize[AV_NUM_DATA_POINTERS] = { 0 };		// 数据源(R.G.B./Y.U.V)
+	uint8_t **outdata;		// uint8_t*[AV_NUM_DATA_POINTERS]数组
+	int *outsize;			// int[AV_NUM_DATA_POINTERS]数组
+	
+	/* 5.转换帧图像 */ 
+	indata[0]  = frame.data;					// 采集到的帧数据
+	insize[0]  = frame.cols * frame.elemSize();	// 输入数据对其后一行的字节数
+	outdata = yuv->data;						// 转换后帧的存储位置
+	outsize = yuv->linesize;					// 由系统内部进行计算和填充
+	sws_scale(swsCtx, indata, insize, 0, frame.rows, outdata, outsize);		
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【三】创建一个编解码器上下文
+	AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+	vc = avcodec_alloc_context3(codec);			// AVCodecContext
+	vc->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;	// 全局编解码器标记 
+	vc->codec_id = codec->id;		// 编解码器ID
+	vc->thread_count = 8;			// 用于编解码的线程数
+
+	vc->bit_rate = 50 * 1024 * 8;	// 码率（可以理解为清晰度）, 单位为b: 越高,编码后的视频越清晰
+	vc->width = inWidth;			// 图像的宽度
+	vc->height = inHeight;			// 图像的高度
+
+	vc->time_base = { 1,30 };		// 时间基数, 以秒为单位, 应该 = 1/fps
+	vc->framerate = { 30,1 };		// 帧率fps
+
+	vc->gop_size = 50;				// 关键帧的周期， 不宜过大，也不宜过小， 一般为50
+	vc->max_b_frames = 0;			// 两个非B桢之间的最大B帧数目, 由于b帧需要依赖于后面一个I帧, 所以max_b_frames部位0时,视频将有延迟, 所以一般设置为0
+	vc->pix_fmt = AV_PIX_FMT_YUV420P; // 这个格式必须需要编码器支持
+	
+	// 推流延迟优化: 	
+	vc->delay = 0;					// 编解码间的延迟, 设置为0
+	av_opt_set(vc->priv_data, "preset", "superfast", 0); //设置priv_data的option
+	av_opt_set(vc->priv_data, "tune", "zerolatency", 0); //设置priv_data的option
+	ret = avcodec_open2(vc, 0, 0);	// 打开编解码器上下文
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【三】创建一个带有视频流的输出上下文
+
+	avformat_alloc_output_context2(&ic, 0, "flv", outUrl);
+	ic->max_interleave_delta = 0;
+	
+	// 优化
+	ic->max_delay = 0;
+	AVStream *vs = avformat_new_stream(ic, NULL);
+	vs->codecpar->codec_tag = 0;
+
+	avcodec_parameters_from_context(vs->codecpar, vc);
+	av_dump_format(ic, 0, outUrl, 1);
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【三】摄像头采集, 进行h264编码并推流到rtmp服务器
+void start_push_flow()
+{
+	//const char *outUrl = "rtmp://172.16.24.211/live";
+	//const char *outUrl = "rtmp://172.16.1.13/live";
+	//const char *outUrl = "udp://172.16.24.169:2000";
+	const char *outUrl = "rtmp://hdlcontrol.com/live/stream";
+	SwsContext *swsCtx = NULL;			// 将BRG24转换为YUV420p(h264的输入格式)的转换器
+	AVFrame *yuv420pFrame = NULL;		// 转换后的帧保存在这里
+	AVCodecContext *encoderCtx = NULL;	// h264编码器上下文
+	AVFormatContext *outFmtCtx = NULL;	// 输出格式上下文
+	VideoCapture camera;	// opencv相机
+	Mat frame;				// opencv相机一帧
+	AVPacket pack;			// 数据包, 从编码器中读取, 写入到格式上下文中
+	
+	int ret;
+
+	/* 1.初始化所有设备.网络模块.编解码器 */
+	avcodec_register_all();
+	av_register_all();
+	avformat_network_init();
+
+	/* 2.用opencv打开本地相机, 然后获取输出图像的宽.高.fps */
+	camera.open(CAP_ANY);
+	int inWidth = camera.get(CAP_PROP_FRAME_WIDTH);
+	int inHeight = camera.get(CAP_PROP_FRAME_HEIGHT);
+	int fps = camera.get(CAP_PROP_FPS);
+
+	/* 3.创建h264编解码器 */
+	AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+	encoderCtx = avcodec_alloc_context3(codec);
+	encoderCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER; // 视频信息协议头
+	encoderCtx->codec_id = codec->id;		// h264
+	encoderCtx->thread_count = 8;			// 用于编码的线程数
+	encoderCtx->bit_rate = 50 * 1024 * 8;	// 码率, 越大视频越清晰
+	encoderCtx->width = inWidth;			// 输入帧的宽度
+	encoderCtx->height = inHeight;			// 输入帧的高度
+	encoderCtx->time_base = { 1,30 };		// 时间基数
+	encoderCtx->framerate = { 30,1 };		// fps
+	encoderCtx->gop_size = 50;				// 关键帧周期
+	encoderCtx->max_b_frames = 0;			// 最大b帧数, 有b帧就会有延迟
+	encoderCtx->pix_fmt = AV_PIX_FMT_YUV420P; // 输入帧的像素格式
+	encoderCtx->delay = 0;
+		// 优化推流延迟, 设置编码器的的私有属性来优化推流延迟	
+	av_opt_set(encoderCtx->priv_data, "preset", "superfast", 0); //设置priv_data的option
+	av_opt_set(encoderCtx->priv_data, "tune", "zerolatency", 0); //设置priv_data的option
+	ret = avcodec_open2(encoderCtx, 0, 0);	// 打开编码器(编码器开始待解码)
+
+
+	/* 4.创建输出格式上下文,并添加视频流 */
+	ret = avformat_alloc_output_context2(&outFmtCtx, 0, "flv", outUrl); 
+		// 优化优化推流延迟
+	outFmtCtx->max_interleave_delta = 0;			// 交叉存取的最大延迟
+	outFmtCtx->max_delay = 0;
+	AVStream *vs = avformat_new_stream(outFmtCtx, NULL);	// outFmtCtx中添加视频流
+	vs->codecpar->codec_tag = 0;							// 编码器标记为空
+	avcodec_parameters_from_context(vs->codecpar, encoderCtx); // 从encoderCtx中获取编码参数
+	av_dump_format(outFmtCtx, 0, outUrl, 1);		// 输出outFmtCtx中的视频流信息
+
+	// 5.分配一帧AV_PIX_FMT_YUV420P图像,来存取转换后的数据
+	yuv420pFrame = av_frame_alloc();
+	yuv420pFrame->format = AV_PIX_FMT_YUV420P;
+	yuv420pFrame->width = inWidth;
+	yuv420pFrame->height = inHeight;
+	yuv420pFrame->pts = 0;
+	ret = av_frame_get_buffer(yuv420pFrame, 32);
+
+	/* 6.创建一个帧转换器 */
+	swsCtx = sws_getCachedContext(swsCtx,
+		inWidth, inHeight, AV_PIX_FMT_BGR24,	
+		yuv420pFrame->width, yuv420pFrame->height, AV_PIX_FMT_YUV420P,
+		SWS_BICUBIC,//SWS_FAST_BILINEAR,	//SWS_BICUBIC,  // 线性插值法(很快)
+		0, 0, 0	);
+
+	/* 7.打开输出流IO, 并写入立媒体头*/ 
+	avio_open(&outFmtCtx->pb, outUrl, AVIO_FLAG_WRITE);
+	avformat_write_header(outFmtCtx, NULL);
+
+	namedWindow("video");	// 打开一个opencv帧显示窗口
+	memset(&pack, 0, sizeof(pack));
+	int vpts = 0;
+	for (;;)
+	{
+		//if (!camera.grab())
+		//	continue;
+		//if (!camera.retrieve(frame))
+		//	continue;
+		/* 8.opencv相机读取一帧,并且转换为了BGR24 */
+		if (!camera.read(frame))	// 相当于调用了上面两个函数
+			continue;
+
+		/* 9.将BGR24转换为h264编码器需要的格式(YUV420p) */
+		uint8_t *indata[AV_NUM_DATA_POINTERS] = { 0 };	// 数据源(R.G.B./Y.U.V)
+		int	insize[AV_NUM_DATA_POINTERS] = { 0 };		// 数据源(R.G.B./Y.U.V)
+		uint8_t **outdata;	// uint8_t*[AV_NUM_DATA_POINTERS]数组
+		int *outsize;		// int[AV_NUM_DATA_POINTERS]数组
+		indata[0]  = frame.data;					// 采集到的帧数据
+		insize[0]  = frame.cols * frame.elemSize();	// 输入数据对其后一行的字节数
+		outdata = yuv420pFrame->data;						// 转换后帧的存储位置
+		outsize = yuv420pFrame->linesize;					// 由系统内部进行计算和填充
+		int h = sws_scale(swsCtx, indata, insize, 0, frame.rows, outdata, outsize);
+		if (h <= 0)
+			continue;
+
+		/* 10.将转换后的YUV420p帧, 进行h264编码 */
+		/* 编码时间戳 =  一帧视频的秒数 / 编码器时间戳(我们自己设置的) 
+					  =  (1 / fps) * (1 / fps)
+		 */
+		yuv420pFrame->pts = vpts++;	// YUV420p帧的pts++
+				
+		ret = avcodec_send_frame(encoderCtx, yuv420pFrame); // 将YUV420p帧放入h264编码器队列
+		if (ret != 0)
+			continue;
+		ret = avcodec_receive_packet(encoderCtx, &pack);	// 从编码器中读取h264编码后的数据包
+		if (ret != 0 || pack.size <= 0)
+			continue;
+
+		/*  11.调整输出包的时间戳: 将AVStream表示的时间戳转换为AVCodec表示的时间戳 */
+		/*	pts * encoderCtx->time_base / vs->time_base
+		
+		 */
+		pack.pts = av_rescale_q(pack.pts, encoderCtx->time_base, vs->time_base);
+		pack.dts = av_rescale_q(pack.dts, encoderCtx->time_base, vs->time_base);
+		pack.duration = av_rescale_q(pack.duration, encoderCtx->time_base, vs->time_base);
+
+		/* 将编码后的数据包发送到输出格式上下文中 */
+		ret = av_interleaved_write_frame(outFmtCtx, &pack);
+		if (ret == 0)
+			cout << "#" << flush;
+
+		imshow("video", frame);
+		waitKey(1 * 1000 / 30);	// 30fps, 调用这个后界面才会刷新
+	}
+}
+
+
+	
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第一章	音视频基础知识
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+【二】音视频编码方式
+	MPEG 系列
+	H.26X 系列	// 音视频都可以采用该方式进行编码
+	Real Media 系列	
+	AVI			// 音视频交错交错
+	MP4			// MPEG-4 编码采用的音频视频容器
+	WAV			// 只是音频
+	MP3			//  MPEG Audio Layer 3
+	
+	
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】音频基础知识	
+	概念:	
+		1.同一时刻每个通道的已经采集到的样本称为"一帧"
+		2.对采样率为44.1kHz音频编码时, 一帧音频通常需要1024个样本
+	计算公式
+		音频帧的播放时间 = 一个AAC帧对应的采样样本的个数 / 采样频率(单位为s)。
+		音频帧的播放时长 = 一个AAC帧对应的采样点个数 / 采样频率
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】时间计算
+	①时间基数time_base // 表示一帧的显示秒数 = 1/fps	
+	
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【三】多媒体容器文件格式	
+	//多媒体容器文件格式一般都包括:
+		.文件头部分
+		.索引部分
+		.多媒体数据部分
+	①文件头部分
+		1.符合的压缩标准及规范信息(分辨率、帧率，音频的采样率)
+	②索引部分
+		由于多媒体数据通常会被分成若干块，各块数据之间也可能是不连续存储的，因此需要再索引部分建立多
+		媒体数据的存储位置索引.
+	③多媒体数据部分
+		经过压缩的多媒体数据，包括视频数据、音频数据、文本数据及其他多媒体数据。
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【四】上层通讯协议
+	h.323
+	sip
+	isma
+	rtsp	// 典型的应用就是网络电视的应用
+	rtmp	
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【五】码流.码率/比特率/帧速率/分辨率
+①码流.码率	// 对原流的取样率
+	1.码流(Data Rate)是指视频文件在单位时间内使用的数据流量，也叫码率或码流率，通俗一点的理解就是取样率,
+	 是视频编码中画面质量控制中最重要的部分，一般我们用的单位是kb/s或者Mb/s。一般来说同样分辨率下，
+	 视频文件的码流越大，压缩比就越小，画面质量就越高。码流越大，说明单位时间内取样率越大，数据流，精度就越高，
+	 处理出来的文件就越接近原始文件，图像质量越好，画质越清晰，要求播放设备的解码能力也越高。	
+②采样率
+	采样率是指将模拟信号转换成数字信号时的采样频率，也就是单位时间内采样多少点。
+③比特率
+		1.比特率是指每秒传送的比特(bit)数。单位为bps(Bit Per Second)，比特率越高，传送的数据越大。在视频领域,比特率常翻译为码率 !!!
+		2.常见编码模式：
+	.VBR（Variable Bitrate） // 动态比特率 
+		1.也就是没有固定的比特率，
+		2.压缩软件在压缩时根据音频数据即时确定使用什么比特率，这是以质量为前提兼顾文件大小的方式，
+		3.推荐的编码模式；
+	.ABR（Average Bitrate）	 // 平均比特率 
+		1.是VBR的一种插值参数。
+		2.LAME针对CBR不佳的文件体积比和VBR生成文件大小不定的特点独创了这种编码模式。
+		3.ABR在指定的文件大小内，以每50帧（30帧约1秒）为一段，低频和不敏感频率使用相对低的流量，高频和大动态表现时使用高流量，
+		4.可以做为VBR和CBR的一种折衷选择。
+	.CBR（Constant Bitrate） // 常数比特率 
+		1.指文件从头到尾都是一种位速率。
+		2.相对于VBR和ABR来讲，它压缩出来的文件体积很大，而且音质相对于VBR和ABR不会有明显的提高。
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【五】GOP
+	①介绍:
+		1.Group of Picture，关键帧的周期，也就是两个IDR帧之间的距离，一个帧组的最大帧数，一般而言，每一秒视频至少需要使用 1 个关键帧。
+	②影响
+		1.增加关键帧个数可改善质量，但是同时增加带宽和网络负载
+		2.当I帧的图像质量比较差时，会影响到一个GOP中后续P、B帧的图像质量，直到下一个GOP 开始才有可能得以恢复
+		3.由于P、B帧的复杂度大于I帧，所以过多的P、B帧会影响编码效率，使编码效率降低。
+		4.过长的GOP还会影响Seek操作的响应速度。
+		
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第0章	Android NDK交叉编译FFMPEG并添加测试AS项目
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+【0】Android-studio环境搭建	
+	1.解压
+		android-sdk_r24.4.1-windows.zip
+	2.安装AS
+	3.在AS中选择: 设置-->Android SDK
+	4.Android SDK Location选择sdk_r24.4.1解压后的目录
+	5.SDK Platforms 选择Android API 29, 7.1.1	// 一定要点击右下角"show Packa Details"来下载API依赖
+	6.SDK Tools选择
+		Android SDK Build-tools
+		CMAKE
+		LLDB
+		ANDROID SDK*
+		NDK
+		20.0.55.94570
+		Support Resitory
+	7.SDK安装好后会在其目录下生成ndk-bundle/			// 这就是NDK所在目录
+	8.确保project Structure选项里的SDK路径, JDK使用"use embedded JDK", NDK确保为"ndk-bundle/"所在目录
+	9.修改app/build.gradle文件
+			implementation 'com.android.support:appcompat-v7:29.+'
+		为
+			implementation 'com.android.support:appcompat-v7:+'
+	10.之前老是错误的分析
+		第5步没做好
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【一】安卓NDK相关概念ABI、NEON、JNI和CMAKE分析
+	[1]介绍
+		Android NDK是一套允许您使用原生代码语言(例如C和C++)实现部分应用的工具集。在开发某些类型应用时，
+		有助于重复使用以这个语言编写的代码库。
+	[2]安卓NDK下载路径	
+		https://developer.android.google.cn/ndk/downloads
+	[3]ndk-build
+		1.用linux中的ndk-build来编译ffmpeg
+		2.ndk-build脚本用于在NDK中心启动构建脚本
+		3.自动探测您的开发系统和引用项目文件以确定要构建的内容
+		4.调用gcc来生成二进制文件
+		5.将二进制文件复制到应用的项目路径
+		6.现在的新版本统一用cmake来做
+	[4]java原生接口(JNI)
+		1.Java和C++组件用以互相沟通的接口
+		2.public native int add(int x, int y);
+		3.static {
+			 System.loadLibrary("native-lib");
+		  }
+		4.原生共享库： NDK从原生源代码构建这些库或.so文件。
+		5.原生静态库： NDK也可构建静态库或.a文件，您还可以关联带其他库
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】NDK中CPU的应用二进制界面ABI
+	[1]介绍
+		不同的Android使用不同的CPU, 因此支持不同的指令集
+	[2]ABI包含以下信息
+		.CPU指令集
+		.内存字节顺序
+		.可执行二进制文件的格式
+		.解析的各种约定。对其限制, 堆栈使用和调用函数。
+		.库集
+	[3]安卓支持的ABI
+		-------------------------------------------------------------------
+		ABI			支持的指令集					说明
+		-------------------------------------------------------------------
+		armeabi 	 .ARMV5TE和更高的版本		五硬浮点
+					 .Thumb-1
+		-------------------------------------------------------------------
+(推荐)	armeabi-v7a  .armeabi					与ARMv5、v6设备不兼容
+					 .Thumb-2
+		     		 .VFPv3-D16
+					 .其他可选
+		-------------------------------------------------------------------
+		arm64-v8a    AArch-64
+		-------------------------------------------------------------------
+		x86			 .x86(IA-32)				不支持MOVBE或SSE4
+					 .MMX
+					 .SSE/2/3
+					 .SSSE3
+		-------------------------------------------------------------------
+		x86_64		 .x86-64
+					 .MMX
+					 .SSE/2/3
+					 .SSSE3
+					 .SSE4.1,4.2
+					 POPCNT
+		-------------------------------------------------------------------
+		mips		 MIPS32r1及更高版本
+		-------------------------------------------------------------------
+		mips64		 MIPS64r6
+		-------------------------------------------------------------------
+	[4]NEON	
+		.NEON提供一组标量/矢量指令和寄存器(与FPU共享)--armeabi默认
+		.armeabi-v7a(NEON)
+		.-mfpu=vfp 浮点协处理器
+		.-mfpu=neon
+		.-narch = armv7-a
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【三】Ubuntu虚拟机及常用工具安装并配置samba共享目录
+	①
+		apt-get update
+		apt-get openssh-server		// 安装ssh服务端
+	②配置samba共享目录
+		apt-get install Samba
+		vi /etc/samba/smb.conf
+			[root]
+			comment=root
+			path=/root
+			browseable = yes
+			readonly = no
+		smbpasswd -a root
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【四】ffmpeg源码下载在android下的环境准备
+	ffmpeg-3.4.1.tar.bz2	
+	android-ndk-r14b-linux-x86_64.zip	
+	sudo apt-get install yasm	// 汇编工具
+	sudo apt-get install make	
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【五】在Ubuntu下交叉编译ffmpeg的android脚本
+		unzip android-ndk-r20-linux-x86_64.zip
+		tar -xjf ffmpeg-4.1.tar.bz2
+		
+	①编写交叉编译的脚本
+		//注意: 
+			1.编写脚本时要删除注释,及命令后面的空格
+			2.\后面不能留任何东西, 包括空格, 否则报错
+		#/bin/bash
+		export NDK=/work/android-ndk-r14b		 			#// 指定NDK路径
+		export PLATFORM=$NDK/platforms/android-21/arch-arm 	#// 指定编译的目标平台(android5.0)
+		export TOOLCHAIN=$NDK/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64 	#// 指定交叉编译工具链
+		export CPU=arm7-a									#// 指定目标架构
+		export PREFIX=$PWD/tmp/$CPU
+		#/*  配置文件 */
+		./configure \
+			--prefix=$PREFIX	\			#// 指定编译生成的路径
+			--target-os=android \			#// 目标系统
+			--cross-prefix=$TOOLCHAIN/bin/arm-linux-androideabi- \ 	#// 交叉编译头
+			--arch=arm \					#架构
+			--cpu=armv7-a \					#cpu
+			--sysroot=$PLATFORM \
+			--extra-cflags="-I$PLATFORM/usr/include -fPIC -DANDROID -mfpu=neon -mfloat-abi=softfp" \
+			--enable-cross-compile \		#// 基于交叉编译
+			--cc=$TOOLCHAIN/bin/arm-linux-androideabi-gcc \
+			--nm=$TOOLCHAIN/bin/arm-linux-androideabi-nm \
+			--enable-shared \				#// 生成动态链接库
+			--enable-runtime-cpudetect \	#// 允许cpu探测
+			--enable-gpl \					#// 许可证
+			--enable-small \				#// 文件变小
+			
+			/* neon和硬解码功能(如果要不支持硬解码, 下面的配置选项应该去掉) */		
+			--enable-asm	\				#// 汇编																	
+			--enable-neon	\				#// 用cpu中的协处理器来处理指令							
+			--enable-jni	\				#// 允许C++反调java, 来实现解码						
+			--enable-mediacodec	\			#// 支持加速				
+			--enable-decoder=h264_mediacodec	\		#// 支持硬解码	
+			--enable-hwaccel=h264_mediacodec \			#// 支持硬解码	
+			
+			--disable-debug \
+			--disable-static \
+			--disable-doc \
+			--disable-ffmpeg \
+			--disable-ffplay \
+			--disable-ffprobe \
+			--disable-ffserver \
+			--disable-postproc \
+			--disable-avdevice \
+			--disable-symver \
+			--disable-stripping \
+		//注意: 
+			1.编写脚本时要删除注释
+			2.\后面不能留任何东西, 包括空格, 否则报错
+		
+	②运行交叉编译脚本
+	make && make install
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【六】硬解码、neon、多线程及硬解码性能对比。
+	①支持硬解码(必须包含)
+		--enable-decoder=h264_mediacodec	\		#// 支持硬解码	
+		--enable-hwaccel=h264_mediacodec \			#// 支持硬解码	
+	②不支持硬解码(不包含)
+		--enable-decoder=h264_mediacodec	\		#// 支持硬解码	
+		--enable-hwaccel=h264_mediacodec \			#// 支持硬解码	
+	③支持CPU协处理器处理指令
+		--enable-neon	\				#// 用cpu中的协处理器来处理指令							
+	④性能测试(基于骁龙835)
+		 [1]单线程开启neon
+				解码: 50-60fps
+	     [2]不开neon单线程
+				解码: 30-40fps
+		 [3]八线程开启neon
+				解码: 200-250fps
+		 [4]八线程不开neon
+				解码:140-150fps
+		 [5]骁龙625硬解码
+			60帧
+		 [5]骁龙835硬解码
+			120帧
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【七】Android Studio配置权限、jni库路径、ABI和Cmake
+	①在app\src\main\AndroidManifest.xml中添加一段用户的读写权限
+			<uses-permission
+				android:name="android.permission.WR
+				ITE_EXTERNAL_STORAGE"/>
+			<application
+	②app/build.gradle下设置版本
+		/* android{defaultConfig{下*/
+		compileSdkVersion 26
+			defaultConfig{
+				application "ff.aplay"
+				minSdkVersion 14
+				targetSdkVersion 21
+	③添加jni用到库的配置文件(build.gradle)路径
+		/* android{defaultConfig{下*/
+		sourceSets {
+			main{
+				jniLibs.srcDirs = ["libs"]
+			}
+		}
+	④设置cmake和NDK的参数
+	/*android{下*/
+	externalNativeBuild {
+		cmake{
+			cppFlags "-std=c++11"
+		}
+		ndk{
+			abiFilter "armeabi-v7a"
+		}
+	}
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【八】cmake配置(app/CMakeLists.txt)(导入库、头文件、链接)分析
+	①指定cmake头文件路径
+		include_directories(include)	// 指定了当前路径, cmake的头文件要与CMakeLists.txt放在同一路径
+	②设置ffmpeg的库路径
+		-DANDROID_ABI=armeabi-v7a
+		set(FF_DIR
+			${CMAKE_CURRENT_SOURCE_DIR}/libs/${ANDROID_ABI})
+	③cmake添加动态库(add_library)	
+		[1]通过源码添加库
+			格式: 
+				add_library(<name> [STATIC |SHARED | MOUDULE] [EXCLUDE_FROM_ALL] source1 [source2...])
+			示例: 
+				add_library(native-lib SHARED src/main/cpp/native-lib.cpp)
+		[2]添加编译好的动态库
+			格式:
+				add_library(avformat SHARED IMPORTED) // avformat: 库符号, IMPORTED: 需要导入
+		[3]set_target_properties(设置目标属性)
+			格式:
+				set_target_properties(target1 target12...
+					PROPERTIES prop1 value1  prop1 value2...)
+			示例:
+				set_target_properties(AVformat PROPERTIES IMPORTED_LOCATION ${FF_DIR}/libavformat.so)
+	④Cmake链接动态链接库
+		target_link_libraries(# Specifies the target library)
+			native-lib	// 将下面的库链接到native-lib
+			android
+			avformat avcodec swscale avutil
+			
+			# LINKS the target library to log library
+			#included in the NDK.
+			${log-lib})
+			
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【九】创建支持ffmpeg的AndroidStudio项目并调用其接口在界面显示库配置、
+	1.将编译好的ffmpeg的include目录拷贝到项目的app/
+	2.将mmfpeg的库拷贝到androi项目的app/libs/armeabi-v7a目录
+	3.在CMAkeLists.txt中添加
+		# 1.指定ffmpeg的头文件路径
+		include_directories(include)	
+		
+		# 2.指定ffmpeg库所在路径的变量为FF: 如 D:\__ANDROIDT___\app\libs\armeabi-v7a\
+		set(FF ${CMAKE_CURRENT_SOURCE_DIR}/libs/${ANDROID_ABI})
+		
+		# 3.设置共享库属性,导入共享库libavcodec.so
+		add_library(avcodec SHARED IMPORTED)
+		set_target_properties(avcodec PROPERTIES IMPORTED_LOCATION ${FF}/libavcodec.so)
+		
+	4.在CMAkeLists.txt中的target_link_libraries中紧挨着native-lib后面插入
+		# 4.将libavcodec.so链接到native-lib中(在MainActivity.java中, 安卓默认仅仅加载了native-lib库)
+		// native-lib
+		avcodec	
+	
+	5.修改项目app/build.gradle/文件的android->defaultConfig->externalNativeBuild字段中添加		
+		// 5.让android-studio编译时,只编译(过滤出)"armeabi-v7a"平台
+		ndk{
+			abiFilters "armeabi-v7a"
+		}
+	6.修改app/build.gradle文件, 在android->defaultConfig-中添加一个与externalNativeBuild同级别的字段
+		// 6.设置jni调用库的路径
+		sourceSets {
+			main {
+				jniLibs.srcDirs=['libs']
+			}
+		}
+	7.在native-lib.cpp中添加
+		// 7.在cpp文件中调用ffmpeg中的库libavcodec.so中的函数来显示ffmpeg库的配置信息
+		extern "C" {
+			#include <libavcodec/avcodec.h>
+		}
+		hello += avcodec_configuration();
+
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+						第0章	音视频包推流同步策略
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+//秒数 = PTS * timebase = PTS(timebase.num/timebase.den)
+【一】当前未同步前使用的时间技术方案
+	1.音频编码:	采用样本数计时
+		// 编码时间戳 = 一帧音频的秒数sec / 编码时间基数
+		//apts += (pcm->nb_samples / sampleRate) / (ac->time_base.num / ac->time_base.den);
+		aPts += av_rescale_q(pcm->nb_samples, { 1,sampleRate }, aEncodeCtx->time_base);
+	2.视频编码:采用Fps计时
+		/* 编码时间戳: = 一帧时间 / 编码时间基数
+					   = 1/fps * {1/fps} = 1  */
+		vPts += 1;
+			
+	3.音频推流: 采用Stream Timebase
+		// 将包时间戳.由基于编码器的时间基数.转换为基于流的时间基数
+		vPkt->pts = av_rescale_q(vPkt->pts, vEncodeCtx->time_base, vStream->time_base);
+		vPkt->dts = av_rescale_q(vPkt->dts, vEncodeCtx->time_base, vStream->time_base);
+		vPkt->duration = av_rescale_q(vPkt->duration, vEncodeCtx->time_base, vStream->time_base);
+
+	4.视频推流: 采用Stream Timebase
+		// 将包时间戳.由基于编码器的时间基数.转换为基于流的时间基数
+		aPkt->pts = av_rescale_q(aPkt->pts, aEncodeCtx->time_base, aStream->time_base);
+		aPkt->dts = av_rescale_q(aPkt->dts, aEncodeCtx->time_base, aStream->time_base);
+		aPkt->duration = av_rescale_q(aPkt->duration, aEncodeCtx->time_base, aStream->time_base);
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】出现延迟的原因
+	我们设定的视频的fps为30， 但是我们并不能保证一秒钟采集30帧
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【三】解决策略
+①方案一: 精准控制视频帧的fps	// 不可行, 因为采集过程中可能有丢帧现象
+②方案二: 采用系统时间来计算时间戳	// 可行
+	[1]视频同步策略:
+		1.采集的时间戳为
+			采集时间戳 = av_gettime() - This->sysPts;	// 包的时间戳(毫秒) = 当前时间-开始记录的时间
+		
+		2.brg24ToYuv420p(格式转换)后的AVFrame
+			1.时间戳 = 采集时间戳
+		3.vEncode(帧编码)中
+			1.if(当前被编码的帧的时间戳 == 上一个被编码帧的时间戳) //CPU计时未达到时间戳的精度
+				当前被编码的帧的时间戳 += 1000;	// 毫秒
+			2.编码后得到的包的时间戳不变
+		4.发送数据包
+			将编码后的包的时间戳,由系统时间基数(1,1000000)表示.转换为由流时间戳表示
+			aPkt->pts = av_rescale_q(aPkt->pts, sysTimebase, aStream->time_base);
+			aPkt->dts = av_rescale_q(aPkt->dts, sysTimebase, aStream->time_base);
+			aPkt->duration = av_rescale_q(aPkt->duration, sysTimebase, aStream->time_base);
+
+	[2]音频同步策略:
+		1.采集的时间戳为
+			采集时间戳 = av_gettime() - This->sysPts;	// 包的时间戳(毫秒) = 当前时间-开始记录的时间
+		
+		2.fmtS16_to_fmtFltp(重采样)后的AVFrame
+			1.时间戳 = 采集时间戳
+		3.aEncode(帧编码)中
+			1.if(当前被编码的帧的时间戳 == 上一个被编码帧的时间戳) //CPU计时未达到时间戳的精度
+				当前被编码的帧的时间戳 += 1000;	// 毫秒
+			2.编码后得到的包的时间戳不变
+		4.发送数据包之前
+			将编码后的包的时间戳,由系统时间基数(1,1000000)表示.转换为由流时间戳表示
+			vPkt->pts = av_rescale_q(vPkt->pts, sysTimebase, vStream->time_base);
+			vPkt->dts = av_rescale_q(vPkt->dts, sysTimebase, vStream->time_base);
+			vPkt->duration = av_rescale_q(vPkt->duration, sysTimebase, vStream->time_base);
+			
+	
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+						第0章 音视频概念
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+【一】I、P、B帧
+	I 帧（Intra coded frames）：
+		I 帧图像采用帧内编码方式，即只利用了单帧图像内的空间相关性，而没有利用时间相关性。
+		I 帧使用帧内压缩，不使用运动补偿，由于 I 帧不依赖其它帧，所以是随机存取的入点，同时是解码的基准帧。
+		I 帧主要用于接收机的初始化和信道的获取，以及节目的切换和插入，I 帧图像的压缩倍数相对较低。
+		I 帧图像是周期性出现在图像序列中的，出现频率可由编码器选择。
+	P 帧（Predicted frames）：P 帧和 B 帧图像采用帧间编码方式，即同时利用了空间和时间上的相关性。
+		P 帧图像只采用前向时间预测，可以提高压缩效率和图像质量。
+		P 帧图像中可以包含帧内编码的部分，即 P 帧中的每一个宏块可以是前向预测，也可以是帧内编码。
+	B 帧（Bi-directional predicted frames）
+		：B 帧图像采用双向时间预测，可以大大提高压缩倍数。
+		值得注意的是，由于 B 帧图像采用了未来帧作为参考，因此 MPEG-2 编码码流中图像帧的传输顺序和显示顺序是不同的。
+
+	也就是说，一个 I 帧可以不依赖其他帧就解码出一幅完整的图像，而 P 帧、B 帧不行。
+		P 帧需要依赖视频流中排在它前面的帧才能解码出图像。
+		B 帧则需要依赖视频流中排在它前面或后面的帧才能解码出图像。
+		这就带来一个问题：在视频流中，先到来的 B 帧无法立即解码，需要等待它依赖的后面的 I、P 帧先解码完成
+		，这样一来播放时间与解码时间不一致了，顺序打乱了，那这些帧该如何播放呢？
+		这时就需要我们来了解另外两个概念：DTS 和 PTS。
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】DTS、PTS、duration
+	DTS（Decoding Time Stamp）：即解码时间戳，这个时间戳的意义在于告诉播放器该在什么时候解码这一帧的数据。
+	PTS（Presentation Time Stamp）：即显示时间戳，这个时间戳用来告诉播放器该在什么时候显示这一帧的数据。
+	duration： 此数据包的持续时间以AVStream-> time_base为单位，如果未知，则为0。
+	//需要注意的是：虽然 DTS、PTS 是用于指导播放端的行为，但它们是在编码的时候由编码器生成的。
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【三】常见封装格式
+	[1]格式
+		①AVI	压缩标准可任意选择
+		②FLV   流媒体格式，用于直播
+		③ts	流媒体格式，用于电视点播
+		④ASF	流媒体格式
+		⑤MP4
+	[2]格式在流中的表示
+		封装格式 	视频编码帧	音频编码帧	...
+		(格式头)
+	[3]格式头包含
+		1.box音视频信息(编码个格式,关键帧索引)
+		2.
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【四】常见编码格式
+	[1]视频
+		①采用预测(帧间预测)
+			H264, wmv XviD 
+		②不采用预测(帧内编码)
+			mjpeg
+	[2]音频
+		①有损压缩
+			ACC MP3 
+		②无损压缩	
+			ape flac 
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【五】从采样和像素格式转换
+	①为什么需要重采样
+		因为ffmpeg的压缩算法都是基于FLTP(float 32位)的样本格式的,
+		而我们大多数的声卡最多支持到24位, 所以我们需要从采样为16/24位声卡才能播放
+	②像素格式转换
+		1.显示器不需要RGB才能显示
+		2.ffmpeg h264编码需要的格式为YUV420P
+			因为h264的算法是基于YUV420P的
+		3.opencv采集到的数据被自动转换成BRG24
+		
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【六】常用像素格式
+	RGB
+	BGR
+	YUV420  : 每上下左右4个像素共用一个UV
+	YUV444	: 每个像素包含一个Y.一个U.一个V
+	YUV422	: 前后两个像素共用一个UV
+	RGBP
+	BGRP
+	YUV420P
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【七】软解码和硬解码
+	硬解码的帧率是固定的, 一般用DSP芯片
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【八】PCM原始音频参数
+	采样率: sample_rate 44100 (CD)	// 一秒钟采多少个样本
+	通道: channels(左右声道)
+	样本大小(样本格式): 一个样本存储的大小
+		S16	// 16位
+		FLT	// float(32)
+	样本类型: plannar (将存取方式与样本大小合在一起定义的一种样本类型)
+		AV_SAMPLE_FMT_S16在内存中的格式为: c1,c2,c1,c2...	// 16位的样本大小采用交叉存取的
+		AV_SAMPLE_FMT_FLTP在内存中的格式为: c1,c1,c1... c2,c2,c2...	// 32位的样本大小采用平面存取的
+		
+
+
+
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第0章	基于ffmpeg直播推流流程.类图
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+		__________________________________________________________________
+	   | 							  									  |	
+	   |	  RGB			    RGB  									  |
+	图像采集------->美颜、水印------->转YUV（H264编码）   ↘			  ↓ 							  ↗  客户端
+															↘			 FLV       RTMP					↗	
+															  → FLV封装	----->推流------>直播服务器(CDN) 	 rtmp, http-flv, hls
+			  RGB			    PCM  						↗			  ↑ 							↘	
+	音频采集------->去燥、变音------->音频重采样（ACC编码）↗			  |								  ↘  客户端
+	   | 							  									  |	
+	   |__________________________________________________________________|
+
+----------------------------------------------------------------------------------------------------------------------------
+									<< 类图 >>
+						
+						↙	XVideoCapture	→→→  XFilter		  ←←←  XBilateralFilter
+					  ↙	采集处理视频			 过滤接口和工厂			双过滤波磨皮
+	   XDataThread						↖		     ↑				
+	  数据队列服务器 ↖ 				  ↖		 ↑
+	     ↓			   ↖					↖		 ↑
+		 ↓				 ↖	XAudioRecord	  ↖     ↑
+		 ↓					 采集音频	  ↖	↖   ↑
+		 ↓					 				↖ 	  ↖ ↑
+	    XData								  ↖ XController
+	  数据交互格式								  控制类
+							XMediaEncode		↙     ↙
+							 1.音频重采样     ↙	 ↙
+							 2.视频格式转换 ↙	   ↙
+							 3.编码音视频		 ↙
+											   ↙
+											 ↙
+							XRtmp		   ↙
+							 1.flv封装   ↙
+							 2.rtmp推流
+							 
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第0章	ffmpeg + Qt播放器类图
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+	
+	
+	
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第0章	rtmp http-flv hls传输协议
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+		---------------------------------------------------------------------------------
+		协议			描述				协议			原理					延时
+		---------------------------------------------------------------------------------
+		RTMP	      实时传输协议 		  TCP(长连接)	  收到数据后					1-3s
+		---------------------------------------------------------------------------------
+		RTSP		允许同时多个串流需求控制			  位于RTP和RTCP之上
+		---------------------------------------------------------------------------------
+		HLS			    HTTP流			 短连接(HTTP)	  集合一段时间,				>10s
+		---------------------------------------------------------------------------------
+		HTTP-FLV      RTMP over HTTP      长连接(HTTP)	  同RTMP,使用HTTP协议		1-3s
+		---------------------------------------------------------------------------------
+	总结: 
+		RTMP: 		用于推流,
+			Adobe的私有协议，未完全公开, 传输flv,f4v格式流
+		HTTP-FLV:   用于播放
+		HLS:        用于电视和苹果
+		RTSP: RTSP传输ts，MP4格式流
+		
+		
+		
+		
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第一章	流媒体服务器搭建（直播服务器）
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+【一】别人提供的	
+	流媒体云服务器
+		七牛、腾讯、网易
+		
+		
+		
+		
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】搭建crtmpserver（流媒体服务器） // 推荐使用(Nginx服务器)
+	①在linux上搭建crtmpserver
+		/* 环境 */
+		apt-get update
+		apt-get install cmake
+		apt-get install libssl-dev								/* 传输安全协议 */
+		sudo apt-get install build-essential					/* 提供编译程序必须软件包的列表信息 */
+		
+		/* crtmpserver */
+		wget https://codeload.github.com/j0sh/crtmpserver/zip/centosinit
+		unzip centosinit
+		cd crtmpserver-centosinit/builders/cmake/
+		cmake .													/* 当前文件下生成Makefile */
+		make
+		/*	// 在cmake目录编写执行脚本 myrun.sh
+			export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CMAKE_PATH/thelib
+			export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CMAKE_PATH/common
+			export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CMAKE_PATH/thelib
+			export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CMAKE_PATH/applications/vptests
+			export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CMAKE_PATH/applications/flvplayback
+			export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CMAKE_PATH/applications/appselector
+			export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CMAKE_PATH/applications/samplefactory
+			export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CMAKE_PATH/applications/proxypublish
+			export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CMAKE_PATH/applications/stresstest
+			export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CMAKE_PATH/applications/admin
+			export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CMAKE_PATH/lua
+			export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$CMAKE_PATH/tinyxml
+			./crtmpserver/crtmpserver ./crtmpserver/crtmpserver.lua
+		*/
+		
+		./myrun		/* 不能进入crtmpserver目录去执行 */
+	②在windows中用ffmpeg工具推流， 并使用vlc播放。
+		[1]下载： http://ffmpeg.org/download.html
+			ffmpeg-20190625-bb11584-win32-dev.zip
+			ffmpeg-20190625-bb11584-win32-shared.zip
+			
+		[2]解压，并将ffmpeg-20190625-bb11584-win32-shared\bin配置到环境变量中
+		
+		[3]ffmpeg将MP4文件推流到linux的crtmpserver服务器
+			cd D:\HDL_____\视频对讲项目
+			ffmpeg -i test.mp4 -f flv rtmp://172.16.24.211/live/test1	// 解码方式改变, 视频模糊
+			ffmpeg -i test.mp4 -f flv -c copy rtmp://172.16.24.211/live/test1
+				说明:
+					-i	 			// 指定文件路径
+					-f   			// 指定推流的格式
+					rtmp 			// 使用的传输类型
+					172.16.24.211	// crtmpserver服务器的ip地址
+					live/tese1		// 推到crtmpserver服务器的目录
+					-c copy			// 拷贝原始数据
+					
+		[4]使用VLC软件进行拉流
+			1.点击 媒体->打开网络串流
+			2.填入拉流地址
+				rtmp://172.16.24.211/live/test1
+		
+	
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】搭建Nginx（流媒体服务器）	// Nginx + RTMP(C语言, 开源)		// 推荐
+Linux:	
+	①搭建Nginx服务器
+		/* 环境 */
+		apt-get update
+		apt-get install cmake
+		apt-get install libssl-dev								/* 传输安全协议 */
+		sudo apt-get install build-essential					/* 提供编译程序必须软件包的列表信息 */
+		sudo apt-get install libcre3-dev
+		apt-get install libpcre3 libpcre3-dev				
+		
+		/* Nginx */
+		wget http://nginx.org/download/nginx-1.15.0.tar.gz
+		tar -xzf nginx-1.15.0.tar.gz 
+		git clone https://github.com/arut/nginx-rtmp-module.git	/* 下载nginx-rtmp-module模块 */
+		cd nginx-1.15.0
+		./configure --add-module=/work/nginx/nginx-rtmp-module  /* 将nginx-rtmp-module模块配置到nginx-1.15.0中 */	/* 参考github上的配置方法 */
+		make
+		make install
+		cd /usr/local/nginx/sbin
+		./nginx
+		ps -elf | grep nginx		/* 确保nginx正在运行 */
+		
+	②测试Nginx服务器服务器是否搭建成功
+		在浏览器中输入: 172.16.24.221(服务器ip)
+		如果出现: Welcome to nginx!, 则表示nginx服务器搭建成功
+		
+	③配置Nginx服务器上的rtmp直播
+		cd /usr/local/nginx/conf
+		sudo vim nginx.conf
+			/* 紧接着events字段添加rtmp字段
+			events {
+				worker_connections  1024;
+			}
+			*/
+			rtmp {
+				server {
+					listen 1935;		/* 使用1935端口 */
+					chunk_size 4096;	/* 数据块的大小 */
+					application live {	/* 应用名 */
+						live on;		/* 开启应用 */
+					}
+				}
+			}		
+		killall nginx
+		../sbin/nginx
+		 ps -elf | grep nginx
+		 
+	④测试Nginx服务器上的rtmp直播
+		cd D:\HDL_____\视频对讲项目>
+		ffmpeg -i test.mp4 -f flv rtmp://172.16.24.211/live
+			1.点击 VLC 软件->媒体->打开网络串流
+			2.填入拉流地址
+				rtmp://172.16.24.211/live/
+				
+	⑤使用ffply(ffmpeg自带的播放工具)来测试Nginx的rtmp
+		ffplay rtmp://172.16.24.211/live -fflags nobuffer	/* -fflags nobuffer: 不缓存(降低延迟) */
+	
+	⑥配置Nginx服务器,使在网页上能够看到服务器的推流状态
+		cd /usr/local/nginx/conf
+		sudo vim nginx.conf
+		在http 字段下的#gzip  on;后面添加server字段
+			// #gzip  on
+			server {
+				listen 8080;							/* 监听状态使用的端口 */
+				location /stat {
+					rtmp_stat all;						/* 监控所有状态 */
+					rtmp_stat_stylesheet stat.xsl;		/* 状态显示样式为样式表 */		
+				}
+				location /stat.xsl {
+					root /work/nginx/nginx-rtmp-module;	/* 设置查看stat.xsl的用户为root,及路径 */
+				}
+			}
+	⑥查看Nginx服务器中的rtmp状态
+		在浏览器中输入: http://172.16.24.211:8080/stat
+	
+	
+	④Nginx服务器特性
+		.RTMP / HLS / MPEG-DASH直播
+		.RTMP视频点播FLV / MP4，从本地文件系统或HTTP播放
+		.对分布式流媒体的流中继支持：推拉模型
+		.在多个FLV中记录流
+		.H264 / AAC支持
+		.使用FFmpeg进行在线转码
+		.HTTP回调（发布/播放/记录/更新等）
+		.在某些事件上运行外部程序（exec）
+		.HTTP控制模块，用于录制音频/视频和丢弃客户端
+		.高级缓冲技术可将内存分配保持在最低水平，从而实现更快的流式传输和更低的内存占用
+		.事实证明可以使用Wirecast，FMS，Wowza，JWPlayer，FlowPlayer，StrobeMediaPlayback，ffmpeg，avconv，rtmpdump，flvstreamer等等
+		.XML / XSL中的统计信息，以机器和人类可读的形式
+		
+windows搭建nginx-rtmp:
+	https://blog.csdn.net/never715/article/details/74078954
+		
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第一章	FFmpeg文件推流
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+
+	①创建输入流(上下文)
+		char *inUrl = "test.flv";				// 设置输入流为文件
+		av_register_all() 						// 初始化所有的封装和解封装, 比如flv mp4 mov mp3
+		avformat_network_init()					// 初始化网络库
+		AVFormatContext *ictx = avformat_alloc_context();
+		avformat_open_input(&ictx, inUrl, 0, 0);// 从文件中打开输入流
+		avformat_find_stream_info(ictx, 0);		// 从输入流信息
+		av_dump_format(ictx, 0, url, 0);		// 打印输入流的所有索引信息
+		
+	
+	②创建输出流(上下文)
+		char *outUrl = "rtmp://172.16.24.211/live";	// 设置输出流为nginx服务器上的live
+		AVFormatContext *octx;
+		avformat_alloc_output_context2(&octx, 0, "flv", outUrl);
+	③配置输出流
+		// 遍历输入上下文的所有媒体流
+		for(int i=0; i < ictx->nb_streams; i++) {
+				// 在输出上下文中创建流, 流的编码格式与输入对应流的格式一致
+			AVStream *out_stream = avformat_new_stream(octx, ictx->streams[i]->codec->codec);
+				// 复制流配置信息: 用于MP4(老版本)
+			//avcodec_copy_contex(out_stream->codec, ictx->streams[i]->codec);			// 老接口, 废弃	
+			avcodec_paramters_copy(out_stream->codecpar, ictx->streams[i]->codecpar);	// 新接口,推荐
+			out_stream->codec->codec_tag = 0;									// 配置输出流不需要再编码
+		}
+		av_dump_format(octx, 0, outUrl, 1);			// 打印输出流的所有索引信息	
+	④rtmp推流
+		// 打开AV句柄的IO
+		avio_open(&octx->pb, outUrl, AVIO_FLAG_WRITE)
+		
+		// 写入头信息
+		avfromat_write_header(octx, 0);
+		
+		AVPacket pkt;
+		long long startTime = av_gettime();	// 获取系统时间戳,微妙
+		
+		// 推流每一帧
+		for (;;) 
+		{
+			av_read_frame(ictx, &pkt);		// 从AV句柄中读出一帧到pkt中	
+			if (re != 0)					// 这一句必须要有
+				break;
+			cout<<pkt.pts<<endl;		// 打印针的事件戳
+			
+			// 重新调整输出的每个包(帧)的时间戳
+			AVRational itime = ictx->streams[pkt.stream_index]->timebase; 	//stream_index: 0.1.2视频.音频.字幕
+			AVRational otime = octx->streams[pkt.stream_index]->timebase; 	//stream_index: 0.1.2视频.音频.字幕
+			pkt.pts = av_rescale_q_rnd(pkt.pts, itime, otime, AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX);
+			pkt.dts = av_rescale_q_rnd(pkt.dts, itime, otime, (AVRounding)(AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX));
+			pkt.duration = av_rescale_q_rnd(pkt.duration, itime, otime, (AVRounding)(AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX));
+			pkt.pos = -1;
+			
+	⑤根据pts和系统计时控制推流速度	
+			// 当前包是视频帧
+			if(ictx->streams[pkt.stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+				AVRational ibase = ictx->streams[pkt.stream_index]->time_base; 	//时间戳的秒基数(就是时间戳*基数=时间值)
+				long long now = av_gettime()- startTime;		// 已经过去的时间
+				long long dts = pkt.dts * (ibase.num / ibase.den) * 1000 *1000;	 /* 包的解码时间戳 */
+				if (dts > now)
+					av_usleep(dts-now);	/* 解码时间戳 > 应该正在解码系统时间 (会造成视频卡顿), 那就让系统时间延时到解码时间戳 */
+			}	
+			// 将调整后的包写入输出context中
+			av_interleaved_write_frame(octx, &p1kt);
+			
+			
+			//ret = av_packet_unref(pkt);		// 重置包中数据的引用计数, 如果调用了av_interleaved_write_frame(自动释放包), 就不在需要调用该函数
+		}
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+					第一章	FFmpeg大华海康相机rtsp推流
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+1.与文件推流不同的是, rtsp相机发出的流的速度已经控制好, 所以我们不在需要设置推流速度。
+
+使用rtmp协议	
+2.海康相机 192.168.1.164 admin 12345
+  大华	   192.168.1.108 admin admin
+  rtsp://用户名:密码@ip
+3.I帧间隙越大, 能够压缩得更小, 但是中途拉流时间可能会更长
+
+4.使用ffplay进行测试, 推流
+	ffplay rtmp://172.16.24.211/live --flags nobuffer
+
+	
+		
+代码-------------------------------------------------------------------------------
+
+	①创建输入流(上下文)
+		char *inUrl = "rtsp://test:test123456@172.16.24.211";	// 设置输入流rtsp摄像机
+		char *outUrl = "rtmp://test:test123456@172.16.24.211";	// 设置输入流为文件
+		av_register_all() 						// 初始化所有的封装和解封装, 比如flv mp4 mov mp3
+		avformat_network_init()					// 初始化网络库
+		AVFormatContext *ictx = avformat_alloc_context();
+		avformat_open_input(&ictx, inUrl, 0, 0);// 打开rtsp流
+		
+		// 给输入上下文设置参数, 解决网络相机rtsp协议传输延时的问题
+		AVDictionary *opts = NULL;
+		char *key = "max_delay";	// 最大rtsp协议延迟时间
+		char *val  = "500";			// 最大rtsp协议延时时间为500毫秒, 偶尔出现延时时不丢包, 丢包会花屏
+		av_dict_set(&opts, key, val, 0);
+		
+		char key2 = "rtsp_transport";	// 指定rtsp的传输协议
+		char val2 = "tcp";	// 或者为udp
+		av_dict_set(&opts, key2, val2, 0);
+		
+		avformat_find_stream_info(ictx, 0);		// 从输入流信息
+		av_dump_format(ictx, 0, url, 0);		// 打印输入流的所有索引信息
+		
+	
+	②创建输出流(上下文)
+		char *outUrl = "rtmp://172.16.24.211/live";	// 设置输出流为nginx服务器上的live
+		AVFormatContext *octx;
+		avformat_alloc_output_context2(&octx, 0, "flv", outUrl);
+	③配置输出流
+		// 遍历输入上下文的所有媒体流
+		for(int i=0; i < ictx->nb_streams; i++) {
+				// 在输出上下文中创建流, 流的编码格式与输入对应流的格式一致
+			AVStream *out_stream = avformat_new_stream(octx, ictx->streams[i]->codec->codec);
+				// 复制流配置信息: 用于MP4(老版本)
+			//avcodec_copy_contex(out_stream->codec, ictx->streams[i]->codec);			// 老接口, 废弃	
+			avcodec_paramters_copy(out_stream->codecpar, ictx->streams[i]->codecpar);	// 新接口,推荐
+			out_stream->codec->codec_tag = 0;									// 配置输出流不需要再编码
+		}
+		av_dump_format(octx, 0, outUrl, 1);			// 打印输出流的所有索引信息	
+	④rtmp推流
+		// 打开AV句柄的IO
+		avio_open(&octx->pb, outUrl, AVIO_FLAG_WRITE)
+		
+		// 写入头信息
+		avfromat_write_header(octx, 0);
+		
+		AVPacket pkt;
+		long long startTime = av_gettime();	// 获取系统时间戳,微妙
+		
+		// 推流每一帧
+		for (;;) 
+		{
+			av_read_frame(ictx, &pkt);		// 从AV句柄中读出一帧到pkt中	
+			if (re != 0 || pkt.size <= 0)					// 这一句必须要有
+				continue;
+			cout<<pkt.pts<<endl;		// 打印针的事件戳
+			
+			// 重新调整输出的每个包(帧)的时间戳
+			AVRational itime = ictx->streams[pkt.stream_index]->timebase; 	//stream_index: 0.1.2视频.音频.字幕
+			AVRational otime = octx->streams[pkt.stream_index]->timebase; 	//stream_index: 0.1.2视频.音频.字幕
+			pkt.pts = av_rescale_q_rnd(pkt.pts, itime, otime, AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX);
+			pkt.dts = av_rescale_q_rnd(pkt.dts, itime, otime, (AVRounding)(AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX));
+			pkt.duration = av_rescale_q_rnd(pkt.duration, itime, otime, (AVRounding)(AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX));
+			pkt.pos = -1;
+			
+	⑤根据pts和系统计时控制推流速度	(fps)
+		#if 0	// rtsp相机自动控制推流速度
+			if(ictx->streams[pkt.stream_index]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {// 当前包是视频帧
+				AVRational ibase = ictx->streams[pkt.stream_index]->time_base; 	//时间戳的秒基数(就是时间戳*基数=时间值)
+				long long now = av_gettime()- startTime;		// 已经过去的时间
+				long long dts = pkt.dts * (ibase.num / ibase.den) * 1000 *1000;	 /* 包的解码时间戳 */
+				if (dts > now)
+					av_usleep(dts-now);	/* 解码时间戳 > 应该正在解码系统时间 (会造成视频卡顿), 那就让系统时间延时到解码时间戳 */
+			}
+		#endif		
+			// 将调整后的包写入输出context中
+			av_interleaved_write_frame(octx, &pkt);
+			
+			//ret = av_packet_unref(pkt);		// 重置包中数据的引用计数, 如果调用了av_interleaved_write_frame(自动释放包), 就不在需要调用该函数
+		}
+		
+		
+		
+
+	
+	
+	
+	
+	
+		
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,83 @@
+curl是一个命令行工具
+libcurl是用于代码调用的库
+
+curl句柄不能再多线程中共享
+
+libcurl是一个跨平台的网络协议库，支持http, https, ftp, gopher, telnet, dict, file, 和ldap 协议。
+
+
+在解压后的curl-7.61.0\docs\examples目录中有各种使用例子(http/ftp/https ...)
+	
+
+所有API: 
+	https://curl.haxx.se/libcurl/c/
+	
+HTTP get:
+	https://curl.haxx.se/libcurl/c/CURLOPT_HTTPGET.html
+	
+	
+--------------------------------------------------------------------------------------------------------	
+数据交互:
+	typedef enum {
+	  CURLINFO_TEXT = 0,
+	  CURLINFO_HEADER_IN,    /* 1 */
+	  CURLINFO_HEADER_OUT,   /* 2 */
+	  CURLINFO_DATA_IN,      /* 3 */
+	  CURLINFO_DATA_OUT,     /* 4 */
+	  CURLINFO_SSL_DATA_IN,  /* 5 */
+	  CURLINFO_SSL_DATA_OUT, /* 6 */
+	  CURLINFO_END
+	} curl_infotype;
+
+	建议使用
+		curl_easy_setopt(curl, CURLOPT_HTTPGET, 1L);
+		curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, my_trace);
+	因为传输的任何数据都会回调my_trace函数, 我们可以在my_trace里面根据传输的数据类型去筛选我们需要的数据
+	
+	
+--------------------------------------------------------------------------------------------------------	
+curl初始化和释放
+	// 初始化
+	curl_global_init(CURL_GLOBAL_ALL);
+	curl = curl_easy_init();
+	// 清理
+	curl_easy_cleanup(curl);
+	curl_global_cleanup();
+注意: 不要在多线程中共享curl, 会出错
+--------------------------------------------------------------------------------------------------------	
+get:
+	
+	
+--------------------------------------------------------------------------------------------------------	
+post:
+
+	1.指定协议头
+		struct curl_slist *headers=NULL;
+		curl_slist_append(headers, "Content-Length:171");
+		curl_slist_append(headers, "Content-Type: application/json");
+		....
+		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+		curl_slist_free_all(headers);
+
+	2.指定post数据
+		curl_easy_setopt(curl, CURLOPT_POSTFIELDS, str);	// str: 字符串指针
+	3.在标准错误中输出"http发送和接收的所有信息"(包括头部信息的所有信息)
+		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+	
+	4.在回调函数中输出发送和接收的所有数据
+		int my_trace(CURL *handle, curl_infotype type, char *data, size_t size,void *userp)
+		{	// http上传送任何数据都会回调该函数
+			printf("%d\n", type);
+			printf("%s\n", (char *)data);
+			return 0;
+		}
+		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);	// 必须要
+		curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, my_trace);
+	5.读取post的回复数据(不包含协议头)
+		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, Callback);
+--------------------------------------------------------------------------------------------------------	
+注意: 就算post之后线程被挂起, 注册的回调函数照样能被调用	
+	
+	
+	
+	
