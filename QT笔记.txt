@@ -3686,7 +3686,7 @@ QJsonValue		// QJsonValue是JSON对象封装的一个值。
 			else
 			   dump("Unknown");
 			dump(QString("byteOrder:    ") + QString::number(fmt.byteOrder()));
-		
+		}
 
 ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
 【三】camera组件
