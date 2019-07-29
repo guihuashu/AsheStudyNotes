@@ -3435,161 +3435,257 @@ QJsonValue		// QJsonValue是JSON对象封装的一个值。
 ▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃
 						第26章  Qt多媒体
 ▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃
-QMediaPlaylist	// 提供媒体资源的列表
-QMediaPlayer	// 提供媒体播放器来打开流媒体或者本地文件
-▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
-①概述
-	1.QMediaPlayer类允许播放媒体源。
-	2.QMediaPlayer类是高级媒体播放类。 它可用于播放歌曲，电影和网络电台等内容。
-	3.要播放的内容被指定为QMediaContent对象，可以将其视为附加附加信息的主要或规范URL。
-	4.当提供QMediaContent播放时或许可以开始播放。
-	5.通常将QMediaPlayerList与其配合使用
-②获取当前播放的音频文件的总时长和播放了的时长
-		// 播放进度改变(以毫秒为单位)
-		 QObject::connect(player, &QMediaPlayer::positionChanged, this, &Widget::positionChanged);
-		void Widget::positionChanged(qint64 position)
-		{
-			int total = player->duration() / 1000;  // 当前播放文件的总时长
-			int cur = position / 1000;              // 当前播放的时长
-		}
-③获取当前播放的文件名
-		// 总时长改变(以毫秒为单位)    // 播放新文件是将产生该信号
-		QObject::connect(player, &QMediaPlayer::durationChanged, this, &Widget::durationChanged);
-		// 播放进度改变(毫秒为单位)
+【一】播放多媒体
+	①概述
+		1.QMediaPlayer类允许播放媒体源。
+		2.QMediaPlayer类是高级媒体播放类。 它可用于播放歌曲，电影和网络电台等内容。
+		3.要播放的内容被指定为QMediaContent对象，可以将其视为附加附加信息的主要或规范URL。
+		4.当提供QMediaContent播放时或许可以开始播放。
+		5.通常将QMediaPlayerList与其配合使用
+	②获取当前播放的音频文件的总时长和播放了的时长
+			// 播放进度改变(以毫秒为单位)
+			 QObject::connect(player, &QMediaPlayer::positionChanged, this, &Widget::positionChanged);
+			void Widget::positionChanged(qint64 position)
+			{
+				int total = player->duration() / 1000;  // 当前播放文件的总时长
+				int cur = position / 1000;              // 当前播放的时长
+			}
+	③获取当前播放的文件名
+			// 总时长改变(以毫秒为单位)    // 播放新文件是将产生该信号
+			QObject::connect(player, &QMediaPlayer::durationChanged, this, &Widget::durationChanged);
+			// 播放进度改变(毫秒为单位)
 
-		// 播放列表中的文件
-		void Widget::durationChanged(qint64 duration)
-		{
-			QString filename = get_filename(player->currentMedia().canonicalUrl().toString());
-		}
-④向播放列表中加入新文件	// QMediaPlayer会自动顺序播放列表中的文件
-		QMediaPlaylist music_list;    // 音乐播放列表
-		QStringList list = QFileDialog::getOpenFileNames(); // 获取多个文件
-		for (int i=0; i < list.size(); i++) {
-			music_list.addMedia(QUrl(list.at(i)));      // 多个文件放入播放列表
-		}
-⑤播放, 暂停, 停止
-	[slot] void QMediaPlayer::play()		// 开始或者继续播放当前资源
-	[slot] void QMediaPlayer::pause()		// 暂停当前播放的资源
-	[slot] void QMediaPlayer::stop()		// 停止播放, 并重置播放器的位置到初始位置
+			// 播放列表中的文件
+			void Widget::durationChanged(qint64 duration)
+			{
+				QString filename = get_filename(player->currentMedia().canonicalUrl().toString());
+			}
+	④向播放列表中加入新文件	// QMediaPlayer会自动顺序播放列表中的文件
+			QMediaPlaylist music_list;    // 音乐播放列表
+			QStringList list = QFileDialog::getOpenFileNames(); // 获取多个文件
+			for (int i=0; i < list.size(); i++) {
+				music_list.addMedia(QUrl(list.at(i)));      // 多个文件放入播放列表
+			}
+	⑤播放, 暂停, 停止
+		[slot] void QMediaPlayer::play()		// 开始或者继续播放当前资源
+		[slot] void QMediaPlayer::pause()		// 暂停当前播放的资源
+		[slot] void QMediaPlayer::stop()		// 停止播放, 并重置播放器的位置到初始位置
 
 
 ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
 【二】视频组件(QVideoWidget与QMediaPlayer联合使用)
-①QVideoWidget	// 提供了用于播放QMediaObject对象的视频窗口
-		1.将一个QVideoWidget附加到QMediaObject对象上去, 来允许在QVideoWidget上播放QMediaObject的图像或者视频
+	①QVideoWidget	// 提供了用于播放QMediaObject对象的视频窗口
+			1.将一个QVideoWidget附加到QMediaObject对象上去, 来允许在QVideoWidget上播放QMediaObject的图像或者视频
 
-③注意: 
-	1.需要安装解码器: LAVFilters-0.65.exe
-			否则报错: DirectShowPlayerService::doRender: Unresolved error code 0x80040266 ().
-	2.必须设置QVideoWidget的窗口大小, 否则只有声音没有图像.
-②示例:
-		// 窗口大小改变时, 重新设置QVideoWidget的窗口大小
-		void Widget::paintEvent(QPaintEvent *e)
-		{
-			mwidget->resize(this->size());   // 必须设置, 否则显示不出图像
-		}
+	③注意: 
+		1.需要安装解码器: LAVFilters-0.65.exe
+				否则报错: DirectShowPlayerService::doRender: Unresolved error code 0x80040266 ().
+		2.必须设置QVideoWidget的窗口大小, 否则只有声音没有图像.
+	②示例:
+			// 窗口大小改变时, 重新设置QVideoWidget的窗口大小
+			void Widget::paintEvent(QPaintEvent *e)
+			{
+				mwidget->resize(this->size());   // 必须设置, 否则显示不出图像
+			}
 
-		Widget::Widget(QWidget *parent) :
-		{
-			mwidget = new QVideoWidget(this);
-			player = new QMediaPlayer(this);
-			player->setVideoOutput(mwidget);
-			player->setMedia(QUrl::fromLocalFile("D:/HDL_____/qt_test/Video/1.mp4"));
-			player->setVolume(50);
-			mwidget->show();
-		}
+			Widget::Widget(QWidget *parent) :
+			{
+				mwidget = new QVideoWidget(this);
+				player = new QMediaPlayer(this);
+				player->setVideoOutput(mwidget);
+				player->setMedia(QUrl::fromLocalFile("D:/HDL_____/qt_test/Video/1.mp4"));
+				player->setVolume(50);
+				mwidget->show();
+			}
 
 ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
-【二】QAudioFormat
-	①概念
-		1.采样率:   一秒钟采样多少次
-		2.通道数:	  音频通道个数(左通道,右通道)
-		3.样本大小: 样本数据大小(典型为8,16bits)
-			
-		4.样本类型: 
-			QAudioFormat::Unknown 		
-			QAudioFormat::SignedInt 	// 有符号整数
-			QAudioFormat::UnSignedInt 	// 无符号
-			QAudioFormat::Float 		// flot类型样本
-		5.字节序:
-			小端
-			大端
+	【三】Qt音频
+[1]概念
+	1.采样率:   一秒钟采样多少次
+	2.通道数:	  音频通道个数(左通道,右通道)
+	3.样本大小: 样本数据大小(典型为8,16bits)
+		
+	4.样本类型: 
+		QAudioFormat::Unknown 		
+		QAudioFormat::SignedInt 	// 有符号整数
+		QAudioFormat::UnSignedInt 	// 无符号
+		QAudioFormat::Float 		// flot类型样本
+	5.字节序:
+		小端
+		大端
 		6.同一时刻每个通道的已经采集到的样本称为"一帧"	
 		
-	②Qt音频编码器
+	6.Qt音频编码器
 		1.目前Qt支持的是"audio/pcm": 
 		2."audio/pcm"是将所有音频通道的样本交错在一起存放,
-	③示例
-		QAudioFormat fmt;					// 创建音频格式
-		fmt.setSampleRate(44100);			// 设置采样率
-		fmt.setChannelCount(2);				// 设置通道数(双声道)
-		fmt.setSampleSize(16);				// 样本用16位来表示
-		fmt.setCodec("audio/pcm");			// 设置音频编码方式
-		fmt.setByteOrder(QAudioFormat::LittleEndian); // 设置音频数据存储方式为小端
-		fmt.setSampleType(QAudioFormat::UnSignedInt); // 设置样本类型
-	④ nb_samples 	// 一帧音频一个通道的采样数量
-▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
-【三】QAudioDeviceInfo	// 用于描述一个音频设备的信息
-①功能
-	[1]查询可用的音频设备
-	[2]构造与设备通信的类QAudioInput和QAudioOutput。
-	[3]查询每个设备以获取其支持的格式
-	[4]isFormatSupported(QAudioFormat *fmt)函数来判断设备信息是否支持fmt格式
-②获取系统默认音频输入设备的信息
-	QAudioDeviceInfo info = QAudioDeviceInfo::defaultInputDevice();
+	7.nb_samples 	// 一帧音频一个通道的采样数量
+--------------------------------------------------------------	
+[2]	QAudioDeviceInfo	// 用于描述一个音频设备的信息
+	①功能
+		[1]查询可用的音频设备
+		[2]构造与设备通信的类QAudioInput和QAudioOutput。
+		[3]查询每个设备以获取其支持的格式
+		[4]isFormatSupported(QAudioFormat *fmt)函数来判断设备信息是否支持fmt格式
+	②获取系统默认音频输入设备的信息
+		QAudioDeviceInfo info = QAudioDeviceInfo::defaultInputDevice();
+
 	
 ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
 【三】QAudioInput	// 提供用于从音频输入设备读取音频数据的接口。
-	①构建方法
-		1.使用系统的默认音频输入设备构建音频输入
-		2.使用特定的QAudioDeviceInfo创建QAudioInput
-			fmt.setSampleRate(44100);   // 设置采样率
-			fmt.setCodec("audio/pcm");  // 音频编码为原始音频
-			fmt.setSampleSize(16);      // 设置样本大小(bits)
-			fmt.setChannelCount(2);     // 采样通道
-			fmt.setByteOrder(QAudioFormat::LittleEndian);   // 音频数据为小端字节序
-			fmt.setSampleType(QAudioFormat::UnSignedInt);   // 设置样本类型
-			
-			QAudioDeviceInfo info = QAudioDeviceInfo::defaultInputDevice(); 
-			if (!info.isFormatSupported(fmt))			// 检查input是否支持这种输入格式
-				return;
-			QAudioInput *input = new QAudioInput(fmt);	// 使用定义的格式,创建音频输入接口
-			QIODevice *inIO = new QAudioInput(fmt);		// 开始采集,并返回一个用于读取音频的QIODevice
-		
-	②int QAudioInput::bytesReady() const	// 返回可读的字节数
-		
-	②读取音频的方法
-		QByteArray QIODevice::read(qint64 maxSize)
-		
-		1.只需要调用start（）并打开QIODevice进行写入。
-		2.读取4096字节
-			int cnt = 0;
-			char buf[4096]
-			if (input->bytesReady < 4096) {	// 争取一次就读到4096
-				QThread::usleep(50);
-				continue;	
-			}
-			while (cnt < 4096){	// 直到读到4096字节为止
-				int len = io->read(buf+cnt, 4096 - cnt);
-				if (len < 0)
-					break;
-				size += len;
-			}
-	③QAudioInput的状态
-		活动.	暂停.	停止.	空闲.
-		//状态改变时货发出stateChanged（）信号
-	④记录以及录取的时间
-		processedUSecs（）	
+	  QAudioOutput
+	  
 ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
-【三】QAudioOutput	// 播放音频
-	QIODevice *start()
-	suspend()
-	resume()
-	bufferSize()	// 播放缓冲区大小
-	bytesFree()		// 播放缓冲区空闲的字节数
-	periodSize()	// 不用考虑
-		
+【四】音频采集和播放示例
+	①widget.h
+		namespace Ui {
+		class Widget;
+		}
+
+		class Widget : public QWidget
+		{
+			Q_OBJECT
+
+		public:
+			explicit Widget(QWidget *parent = 0);
+			void initInput();
+			void initOutput();
+			~Widget();
+			void dump(QString str);
+			void dump_fmt(QAudioFormat &inFmt);
+			Ui::Widget *ui;
+
+		public:
+			QAudioFormat inFmt;
+			QAudioInput *input;
+			QIODevice *inIo;
+			QAudioFormat outFmt;
+			QAudioOutput *output;
+			QIODevice *outIo;
+		};
+
+	②widget.cpp
+		#include "widget.h"
+		#include "ui_widget.h"
+		//using namespace std;
+		Ui::Widget *gui;
+		static void dump2(QString str)
+		{
+			gui->textBrowser->append(str);
+		}
+		int audioTest(QIODevice *inIo, QIODevice *outIo)
+		{
+			char buf[4096] = {0};
+			qint64 size = sizeof(buf);
+			qint64 len = 0;
+			while (1)
+			{
+				len = 0;
+				while (len < size){
+					len += inIo->read(buf + len, size - len);
+				}
+				//qDebug()<<QString("read: ") + QString::number(len);
+				len = 0;
+				while (len < size){
+					len += outIo->write(buf + len, size - len);
+				}
+			}
+			return 0;
+		}
+
+		Widget::Widget(QWidget *parent) :
+			QWidget(parent),
+			ui(new Ui::Widget)
+		{
+			ui->setupUi(this);
+			gui = ui;
+
+			this->initInput();
+			this->initOutput();
+			std::thread *th = new std::thread(audioTest, inIo, outIo);
+			th->detach();
+		}
+
+		void Widget::initInput()
+		{
+			inFmt.setSampleRate(44100);
+			inFmt.setChannelCount(2);
+			inFmt.setSampleSize(16);
+			inFmt.setSampleType(QAudioFormat::UnSignedInt);
+			inFmt.setByteOrder(QAudioFormat::LittleEndian);
+			inFmt.setCodec("audio/pcm");
+			QAudioDeviceInfo info = QAudioDeviceInfo::defaultInputDevice();
+			if (!info.isFormatSupported(inFmt)) {
+				dump(QString("Default format not supported - trying to use nearest"));
+				inFmt = info.nearestFormat(inFmt);
+			}
+			dump_fmt(inFmt);
+			input = new QAudioInput(inFmt, this);
+			inIo = input->start();
+			if (!inIo) {
+				dump("ERR: input->start()");
+				exit(0);
+			}
+			if (!inIo->open(QIODevice::ReadWrite))  {
+			   dump("ERR: open io");
+			   exit(0);
+			}
+			dump("open input io ok");
+		}
+
+		void Widget::initOutput()
+		{
+			outFmt.setSampleRate(44100);
+			outFmt.setChannelCount(2);
+			outFmt.setSampleSize(16);
+			outFmt.setSampleType(QAudioFormat::UnSignedInt);
+			outFmt.setByteOrder(QAudioFormat::LittleEndian);
+			outFmt.setCodec("audio/pcm");
+			QAudioDeviceInfo info = QAudioDeviceInfo::defaultOutputDevice();
+			if (!info.isFormatSupported(outFmt)) {
+				dump(QString("Default format not supported - trying to use nearest"));
+				outFmt = info.nearestFormat(outFmt);
+			}
+			dump_fmt(outFmt);
+			output = new QAudioOutput(outFmt, this);
+			outIo = output->start();
+			if (!outIo) {
+				dump("ERR: input->start()");
+				exit(0);
+			}
+			if (!outIo->open(QIODevice::ReadWrite))  {
+			   dump("ERR: open io");
+			   exit(0);
+			}
+			dump("open output io ok");
+			dump("------------------------------------------------");
+		}
+
+		Widget::~Widget()
+		{
+			delete ui;
+		}
+		void Widget::dump(QString str)
+		{
+			ui->textBrowser->append(str);
+		}
+		void Widget::dump_fmt(QAudioFormat &fmt)
+		{
+			//QAudioFormat::SampleType type = fmt->SampleType();
+			dump("--------------------- dump_fmt ---------------------");
+			dump(QString("sampleRate:   ") + QString::number(fmt.sampleRate()));
+			dump(QString("channelCount: ") + QString::number(fmt.channelCount()));
+			dump(QString("sampleSize:   ") + QString::number(fmt.sampleSize()));
+
+			dump(QString("SampleType:   "));
+			if (fmt.sampleType() == QAudioFormat::UnSignedInt)
+			   dump("UnSignedInt:");
+			else if ( fmt.sampleType() == QAudioFormat::Float)
+			   dump("Float ");
+			else if ( fmt.sampleType() == QAudioFormat::SignedInt)
+			   dump("SignedInt");
+			else
+			   dump("Unknown");
+			dump(QString("byteOrder:    ") + QString::number(fmt.byteOrder()));
 		
 
 ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
