@@ -3421,7 +3421,7 @@ QJsonValue		// QJsonValue是JSON对象封装的一个值。
 	
 	
 ▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃
-						第26章  Qt多媒体
+						第26章  Qt多媒体播放器
 ▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃
 【一】播放多媒体
 	①概述
@@ -3485,9 +3485,96 @@ QJsonValue		// QJsonValue是JSON对象封装的一个值。
 				player->setVolume(50);
 				mwidget->show();
 			}
+			
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃
+						第26章  Qt视频采集和播放
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃
+【一】QCamera	 // 系统摄像头设备接口。
+	①枚举系统摄像机,并打开其中一个
+		QList<QCameraInfo> camInfos = QCameraInfo::availableCameras();
+		for(int i=0; i<camInfos.size(); i++) {
+			QCameraInfo info = camInfos.at(i);
+			dump(info.deviceName());      			// 相机设备名
+			dump(info.description());     			// 相机的描述
+			if (info.position() == QCamera::FrontFace)      // 前摄像头
+				dump(QString("QCamera::FrontFace"));
+			else if (info.position() == QCamera::BackFace)  // 后摄像头
+				dump(QString("QCamera::BackFace"));
+		}
+	②实例化QCamera
+		camera = new QCamera(QCameraInfo);   // 前相机
+	③相机捕获模式
+		CaptureMode { 
+			CaptureViewfinder,	// 取景器，用于显示摄像头的数据
+			CaptureStillImage,	// 捕获图片
+			CaptureVideo 
+		}
+	④查看相机支持的采集参数
+		supportedViewfinderFrameRateRanges		// 支持的帧率
+		supportedViewfinderPixelFormats			// 支持的像素格式
+		supportedViewfinderResolutions			// 支持的分辨率
+		supportedViewfinderSettings				// 支持的取景器列表
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
+QCameraImageCapture	// 记录媒体图像内容
+示例:
+	camera = new QCamera;
+	viewfinder = new QCameraViewfinder();
+	viewfinder->show();
+	camera->setViewfinder(viewfinder);
+	imageCapture = new QCameraImageCapture(camera);
+	camera->setCaptureMode(QCamera::CaptureStillImage);
+	camera->start();
+	//on half pressed shutter button
+	camera->searchAndLock();
+	//on shutter button pressed
+	imageCapture->capture();
+
+  //on shutter button released
+  camera->unlock();	
+
+	
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
+QCameraViewFinder	// 提供一个取景器窗口
+	取景器，用于设置摄像头的采集参数
+示例:
+	camera = new QCamera;
+	viewfinder = new QCameraViewfinder();			// 分配取景器
+	viewfinder->show();								// 显示取景器窗口
+	camera->setViewfinder(viewfinder);				// 设置相机的取景器	
+	imageCapture = new QCameraImageCapture(camera);	// 设置图像捕获器
+	camera->setCaptureMode(QCamera::CaptureVideo);	// 设置捕获模式
+	camera->start();	// 开始捕获	
 
 ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
-	【三】Qt音频
+【三】QCameraViewfinderSettings 	// 提供了一组取景器的设置。
+	①可设置选项
+		MinimumFrameRate 	// 最大帧率
+		MaximumFrameRate 	// 最小帧率
+		Resolution 			// 分辨率
+		PixelAspectRatio 	// 像素宽高比
+		PixelFormat 		// 像素格式
+		UserParameter		// 用户参数
+	②设置相机的取景器示例	
+		QCameraViewfinderSettings viewfinderSettings;
+		viewfinderSettings.setResolution(640, 480);
+		viewfinderSettings.setMinimumFrameRate(15.0);
+		viewfinderSettings.setMaximumFrameRate(30.0);
+		camera->setViewfinderSettings(viewfinderSettings);	
+	③用户在设置取景器参数之前用该调用下面的函数来查看相机取景器支持的参数
+		supportedViewfinderFrameRateRanges		// 支持的帧率
+		supportedViewfinderPixelFormats			// 支持的像素格式
+		supportedViewfinderResolutions			// 支持的分辨率
+		supportedViewfinderSettings				// 支持的取景器列表
+		
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
+QVideoFrame 
+	一个QVideoFrame代表的就是相机的一帧数据。
+
+
+			
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃
+						第26章  Qt音频采集和播放
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃
 [1]概念
 	1.采样率:   一秒钟采样多少次
 	2.通道数:	  音频通道个数(左通道,右通道)
@@ -3756,45 +3843,45 @@ QJsonValue		// QJsonValue是JSON对象封装的一个值。
 ▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃
 						第26章  Qt OpenGL						
 ▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃
-Qt的所有界面都给予openGl绘制
-QOpenGLWidget(与界面交互)
-Program GLSL 定点和片元(与显卡GPU进行交互)	// 的语言
-材质Texture(如何写入ffmpeg数据)	
+	Qt的所有界面都给予openGl绘制
+	QOpenGLWidget(与界面交互)
+	Program GLSL 定点和片元(与显卡GPU进行交互)	// 的语言
+	材质Texture(如何写入ffmpeg数据)	
 
-void paintGL()				// 绘制
-void initializeGL()			// 材质初始化
-void resizeGL(int w, int h)	// 窗口变化时调用该函数	
-QOpenGLFunctions			// 直接获取opengl的函数
-	
------------------	
-GLShaderProgram		// openGL是在显卡上跑的, GLShaderProgram用于与显卡之间的交互
-1.	编译运行shader
-2.addShaderFromSourceCode
-3.bindAttributeLocation设置传入的变量
-4.uniformLocation获取变量
------------------	
-着色器语言GLSL
-1.着色器语言GLSL 针对于OpenGL,给显卡使用的语言
-	顶点着色器是针对么个顶点执行一次,用于确定顶点的位置;片元着色器是针对每个片元(可以理解为每个像素)执行一次,
-	用于确定每个片元(像素)的颜色
-	// 顶点: 三维坐标中的顶点
-	// 片元: 针对于一个平面, 用于在空间上显示一幅图
-2.GLSL的基本语法与C基本相同
-3.完美的支持箱梁和矩阵的操作
-4.GLSL提供了大量的内置函数来提供丰富的扩展功能
-5.他是通过限定符操作来管理输入输出类型的
------------------	
-顶点着色器: 只能画三角形, 矩形需要另个三角形拼接
------------------	
-材质坐标信息都在第一象限
-
-
+	void paintGL()				// 绘制
+	void initializeGL()			// 材质初始化
+	void resizeGL(int w, int h)	// 窗口变化时调用该函数	
+	QOpenGLFunctions			// 直接获取opengl的函数
+		
+	-----------------	
+	GLShaderProgram		// openGL是在显卡上跑的, GLShaderProgram用于与显卡之间的交互
+	1.	编译运行shader
+	2.addShaderFromSourceCode
+	3.bindAttributeLocation设置传入的变量
+	4.uniformLocation获取变量
+	-----------------	
+	着色器语言GLSL
+	1.着色器语言GLSL 针对于OpenGL,给显卡使用的语言
+		顶点着色器是针对么个顶点执行一次,用于确定顶点的位置;片元着色器是针对每个片元(可以理解为每个像素)执行一次,
+		用于确定每个片元(像素)的颜色
+		// 顶点: 三维坐标中的顶点
+		// 片元: 针对于一个平面, 用于在空间上显示一幅图
+	2.GLSL的基本语法与C基本相同
+	3.完美的支持箱梁和矩阵的操作
+	4.GLSL提供了大量的内置函数来提供丰富的扩展功能
+	5.他是通过限定符操作来管理输入输出类型的
+	-----------------	
+	顶点着色器: 只能画三角形, 矩形需要另个三角形拼接
+	-----------------	
+	材质坐标信息都在第一象限
 
 
------------------	
 
-片元着色器
-1.在片元着色器阶段只有唯一的varying输出变量-及内建变量: gl_FragColor
+
+	-----------------	
+
+	片元着色器
+	1.在片元着色器阶段只有唯一的varying输出变量-及内建变量: gl_FragColor
 
 
 
@@ -3815,7 +3902,7 @@ GLShaderProgram		// openGL是在显卡上跑的, GLShaderProgram用于与显卡�
 		1.将QT for Android环境配置好
 		2.那么在新建QT项目时，右上角应该会有Android的选项 
 		3.我们选择新建Library->C++库，选择Android设备模板
-	③在android studio中使用so库
+	③在android studio中使用so动态库
 		1.添加库
 		2.声明调用方法
 		2.编写jni调用文件
@@ -3839,11 +3926,12 @@ GLShaderProgram		// openGL是在显卡上跑的, GLShaderProgram用于与显卡�
 		2.选择对应安卓硬件的SDK
 			1.项目->build->Build Android APK->Android build SDK
 			2.比如: 安卓armv7-eabi选择android-25
-		2.构建项目时，将依赖的安卓库添加到构建的包中
+		3.构建项目时，将依赖的安卓库添加到构建的包中
 			1.项目->build->Build Android APK->Additional Libraries
 			2.将引用的所有安卓库都添加到项目中
 			3.注意: 库路径要与pro文件中指定的库的路径一致
-					
+	③Qt android 添加opencv库			
+		https://blog.csdn.net/qq_38813056/article/details/97651089
 	
 	
 #####################################################################################	

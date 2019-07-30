@@ -1,4 +1,4 @@
-// ������������
+// 设置启动参数
 set bootargs noinitrd init=/linuxrc console=ttySAC0,115200 root=/dev/nfs nfsroot=192.168.1.103:/work/nfs_root/1.20_fs ip=192.168.1.105:192.168.1.103:192.168.1.1:255.255.255.0::eth0:off
 set bootargs console=ttySAC0,115200 root=/dev/nfs nfsroot=192.168.1.104:/work/nfs_root/qt_fs_new ip=192.168.1.107:192.168.1.104:192.168.0.1:255.255.255.0::eth0:off
 set bootargs console=ttySAC2,115200 console=ttySAC0,9600 root=/dev/nfs nfsroot=192.168.1.101:/work/nfs_root/qt_1.20_fs_wifi_AP/ ip=192.168.1.105:192.168.1.101:192.168.1.1:255.255.255.0::eth0:off
@@ -8,7 +8,7 @@ set bootargs console=ttySAC0,115200 root=/dev/mtdblock3 				// yaffs
 set bootcmd 'nand read 30000000 kernel;bootm 30000000'
 
 ##############################################################################
-// ���û���ID:  	// ����ip
+// 设置机器ID:  	// 设置ip
 set ipaddr 192.168.1.107;
 set serverip 192.168.1.104;
 set ethaddr 00:0c:29:4d:e4:f4;
@@ -17,31 +17,31 @@ save;
 
 
 ##############################################################################
-// �ҽ������ļ�ϵͳ����Ŀ¼
+// 挂接网络文件系统到子目录
 sudo vi /etc/exports
-/work/nfs_root/first_fs *(rw,sync,no_root_squash)	// ����������Ŀ¼���ҽ�
-sudo /etc/init.d/nfs-kernel-server restart			// ������������nfs֧��ϵͳ
-mount -t nfs -o nolock,vers=2 192.168.2.240:/work /mnt/work		// vers=2: nfsЭ��汾��
+/work/nfs_root/first_fs *(rw,sync,no_root_squash)	// 服务器允许目录被挂接
+sudo /etc/init.d/nfs-kernel-server restart			// 重启服务器的nfs支持系统
+mount -t nfs -o nolock,vers=2 192.168.2.240:/work /mnt/work		// vers=2: nfs协议版本号
 
 ##############################################################################
-// PC�����ļ�ϵͳ
+// PC下载文件系统
 tftp 30000000 fs_mini.jffs2
 tftp 30000000 fs_mini_mdev.yaffs2
-nand erase.part rootfs		// ��������
+nand erase.part rootfs		// 擦除分区
 
 ##############################################################################
-// �����ļ�ϵͳ
+// 下载文件系统
 nfs 30000000 192.168.1.103:/work/nfs_root/1.20_fs.yaffs2;
 nand erase.part rootfs;	
 nand write.yaffs 30000000 00320000 	$filesize;  
 nand write.jffs2 30000000 00320000 	$filesize;
 ##
 nfs 30000000 192.168.1.103:/work/nfs_root/1.7_fs_ok.yaffs2;nand erase.part rootfs;nand write.yaffs 30000000 00320000 $filesize; reset
-# 0x00320000: �ļ�ϵͳ��ƫ�Ƶ�ַ; ������rootfs, ��Ϊ���������غܶ��޹ص����ݽ�ȥ	
-# 1.6u-boot��$(filesize), ָ�����ļ��Ĵ�С
+# 0x00320000: 文件系统的偏移地址; 不能用rootfs, 因为这样会下载很多无关的内容进去	
+# 1.6u-boot用$(filesize), 指传输文件的大小
 
 ##############################################################################
-// �����ں�
+// 下载内核
 cp arch/arm/boot/uImage /work/nfs_root/uImage_FTDI;		
 nfs 30000000 192.168.1.104:/work/nfs_root/uImage_FTDI;	bootm 30000000
 nand erase.part kernel;
@@ -54,7 +54,7 @@ nand write 30000000 00120000 200000
 sound.bin
 
 ##############################################################################
-// ����u-boot	u-boot_2012_org.bin	
+// 下载u-boot	u-boot_2012_org.bin	
 nfs 32000000 192.168.1.113:/work/nfs_root/sound_.bin;	//u-boot_2012_k4.bin;		
 nand erase.part u-boot;
 nand write 32000000 u-boot;
@@ -66,38 +66,38 @@ nand write 32000000 0 30000
 
 
 ##############################################################################
-// ��tftp���ߺ�
+// 打开tftp工具后
 tftp 30000000 u-boot.bin
 tftp 30000000 uImage
 
 ##############################################################################
-// ��������
+// 环境变量
 #PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/arm/4.3.2/bin"
 #PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/work/tools/gcc-3.4.5-glibc-2.3.6/bin/"
 /usr/local/arm/4.3.2/bin:/home/lhc/Qt/output/qt-embedded/bin:/home/lhc/Qt/output/qt-arm/bin:/home/book/bin:/home/book/.local/bin:/home/lhc/Qt/output/Qt-Creator/bin:/home/lhc/Qt/output/qt-embedded/bin:/home/lhc/Qt/output/qt-arm/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/usr/local/arm/bin
 sudo mount -t cifs -o username=admin //192.168.1.101/f/ /work/share
 
 ##############################################################################
-SYSTEM-V IPCͨ������
-ipcs -a:	�鿴ϵͳ����IPC��״̬			
-	 -q:	�鿴ϵͳ��Ϣ����
-	 -m:	�鿴�����ڴ�״̬
-	 -s:	�鿴�ź���			// signal
-ipcrm  -m (id��)
+SYSTEM-V IPC通信命令
+ipcs -a:	查看系统所有IPC的状态			
+	 -q:	查看系统消息队列
+	 -m:	查看共享内存状态
+	 -s:	查看信号量			// signal
+ipcrm  -m (id号)
 
 ##############################################################################
-// ���� ���� ��װ	// ����(��������Makefile, ./configure --help)
+// 配置 编译 安装	// 配置(用来生成Makefile, ./configure --help)
 ./configure --host=arm-linux --prefix=$PWD/tmp
 	--with-shared   generate shared-libraries
 make && make install
-sudo cp * /usr/local/arm/4.3.2/arm-none-linux-gnueabi/libc/usr/include	// ��ͷ�ļ��Ϳ⸴�Ƶ���������Ŀ¼(-rfd)
+sudo cp * /usr/local/arm/4.3.2/arm-none-linux-gnueabi/libc/usr/include	// 将头文件和库复制到工具链的目录(-rfd)
 sudo cp -rfd * /usr/local/arm/4.3.2/arm-none-linux-gnueabi/libc/armv4t/lib		// lib
 cp -rfd *so* /work/nfs_root/1.20_fs/lib
 
 ##############################################################################
-// ��������
-	cp .config config_wm8976	//ѡ��wm8976
-	make menuconfig				//ѡ��uda134x
+// 制作补丁
+	cp .config config_wm8976	//选上wm8976
+	make menuconfig				//选上uda134x
 	cp .config config_uda134x
 	cd ..
 	mv linux-3.4.2 linux-3.4.2_alsa
@@ -105,54 +105,54 @@ cp -rfd *so* /work/nfs_root/1.20_fs/lib
 	diff -urN linux-3.4.2 linux-3.4.2_alsa/ > linux-3.4.2_wm8976_uda134x.patch
 	rm -rf linux-3.4.2
 ##############################################################################
-// ����tellet
+// 启动tellet
 	telnetd -l /bin/login
 ##############################################################################
-//�����ں�:
-	1. ��ѹ
-	2. �򲹶�
-	3. ������д�����������Ƶ��ں�, ���޸�Makefile
+//编译内核:
+	1. 解压
+	2. 打补丁
+	3. 将我们写的驱动程序复制到内核, 并修改Makefile
 	4. cp config_ok .config
-	3. make menuconfig, ѡ��LCD DM9000 UVC֧��
+	3. make menuconfig, 选中LCD DM9000 UVC支持
 	4. make uImage
 ##############################################################################
-//����busybox1.20
-	1.make menuconfigָ�����������ͷ
+//编译busybox1.20
+	1.make menuconfig指定交叉编译器头
 	2.make
-	3.��Щ����, ��make menuconfig����һ����ȥ��
+	3.哪些错误, 就make menuconfig把这一部分去掉
 	
 ##############################################################################
-//���app�δ���
-	1. �ó���ֱ���ڿ�����������, ������������ʱ, ��������core dump�ļ�;
-		Ȼ��ʹ��gdb����core dump�ļ��ҵ���������ĵط�
-	2. ��ARM������
+//解决app段错误
+	1. 让程序直接在开发板上运行, 当它发生错误时, 令他产生core dump文件;
+		然后使用gdb根据core dump文件找到发生错误的地方
+	2. 在ARM上运行
 		1. ulimit -c unlimited
-		2. ִ��Ӧ�ó���: �������ʱ���ڵ�ǰĿ¼��������Ϊcore���ļ�
-	3. ��PC��ִ��(����)
+		2. 执行应用程序: 程序出错时会在当前目录下生成名为core的文件
+	3. 在PC上执行(例子)
 		 sudo /usr/local/arm/4.3.2/bin/arm-linux-gdb uvc_app core
-	4. pc��ִ��, ֪�����Ķ������˶δ���, ��ִ��q�˳�
+	4. pc上执行, 知道是哪儿发生了段错误, 可执行q退出
 		backtrace
 ##############################################################################
-//��������δ���
+//解决驱动段错误
 	PC is at 0x0
 	LR is at snd_pcm_info+0xd8/0xe0		
-	==>��Ȼ����snd_pcm_info�������ĳ���Ӻ��������
+	==>显然是在snd_pcm_info里面调用某个子函数后出错
 	
 ##############################################################################
-// strace��ʹ��
+// strace的使用
 	strace -o log app 
 	
 ##############################################################################
-// ִ��su�������root�û�, ���Բ���Ҫsudo����				
-// ����.c�ļ�
+// 执行su命令进入root用户, 可以不需要sudo命令				
+// 编译.c文件
 	gcc a.c ==>a.out
- �������ļ�:
+ 创建空文件:
 	> dir	
-��һ��Ŀ¼��������һ���ط�, ����Ǹ��ط��Ѿ��������Ŀ¼, �Ͷ�������Ŀ¼���кϲ�
+将一个目录拷贝到另一个地方, 如果那个地方已经存在这个目录, 就对着两个目录进行合并
 source /etc/bash.bashrc
 
 ##############################################################################
-// ѡ�������Ŀ��
+// 选择编译多个目标
 gcc :
 	gcc -o client client.c 
 	gcc -o server server.c 
@@ -164,12 +164,12 @@ test :
 c :
 	rm -rf *.o client server
 ##############################################################################
-������uart��easyeop������:
-	1.�������uart��vcc�͵��߶�������
-	2.������ĵ�3������easyeop��2��(��Դ������ΪС)
-		������ĵ�2������easyeop��3��(��Դ������ΪС)
+开发板uart和easyeop的连线:
+	1.开发版的uart的vcc和地线都连上了
+	2.开发版的第3根连到easyeop第2根(电源键方向为小)
+		开发版的第2根连到easyeop第3根(电源键方向为小)
 ##############################################################################
-����������ɶ�̬��so, Ȼ������������APP,��Makefile
+将函数编译成动态库so, 然后再链接生成APP,的Makefile
 app: main.o libsem.so
 	gcc -o $@ $^ -lsem -L.
 	echo LD_LIBRARY_PATH=. ./app > app.sh
@@ -182,44 +182,47 @@ clean:
 	rm -rf *.o *.so app *.sh
 	
 ##############################################################################
-��ҵ:
-ϵͳ����: ϵͳ�Ż�,ϵͳ��������, ϵͳ��ֲ
-Ӳ������: PCB(ûǰ;)
-����,wifi
-Ӧ�ü���---> ���
-��������(�����Ҳ����, ����, ��Ҫ��Ӳ���ǳ��˽�)
-�����˻�ҪѧPID�㷨
-�տ�ʼ��ȥ��������Ӧ�ü���, Ȼ���ٸ�����ȤתΪ������ҵ
+行业:
+系统级别: 系统优化,系统软件开发, 系统移植
+硬件级别: PCB(没前途)
+蓝牙,wifi
+应用级别---> 最多
+驱动级别(干这个也很少, 很难, 需要对硬件非常了解)
+做我人机要学PID算法
+刚开始出去都是现做应用级别, 然后再根据兴趣转为其他行业
 	
 ##############################################################################
-�ȸ��˺�: 982036291@qq.com
+谷歌账号: 982036291@qq.com
 		  zx060198
 github: 982036291@qq.com Zx060198
 PUDN:
-	pudn�ʺţ�ofpb895@163.com
-	pudn���룺aa602389
-	�����ʺţ�ofpb895@163.com
-	�������룺aa602389
+	pudn帐号：ofpb895@163.com
+	pudn密码：aa602389
+	邮箱帐号：ofpb895@163.com
+	邮箱密码：aa602389
 article_content
 QQ	982036291
 	3058935194
 	ZX060198
 	zx060198
-ҽ����
+医保卡
 	622823 047597 1530
 	500233 20170429 0147
 	E55879632
-���￨ 
+就诊卡 
     4024 9077 83
 	384 037
-������
+花生壳
 	zx982036291 zx060198
-NATAPP�˺�
+NATAPP账号
 	net_app
 	zx060198	
 GITHUB
 	982036291@qq.com
 	zx060198
-	
+CSDN账号
+	13928827710  
+	Lss123456789
+
 	
 	
