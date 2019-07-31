@@ -3489,6 +3489,13 @@ QJsonValue		// QJsonValue是JSON对象封装的一个值。
 ▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃
 						第26章  Qt视频采集和播放
 ▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃
+概述
+	QCamera类为系统摄像机设备提供接口。
+	QCamera可配合QCameraViewfinder进行取景器显示(安卓上不适用)，
+	QMediaRecorder进行视频录制，
+	QCameraImageCapture进行图像拍摄。
+	您可以使用QCameraInfo列出可用的相机并选择使用哪一个。
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
 【一】QCamera	 // 系统摄像头设备接口。
 	①枚举系统摄像机,并打开其中一个
 		QList<QCameraInfo> camInfos = QCameraInfo::availableCameras();
@@ -3516,14 +3523,35 @@ QJsonValue		// QJsonValue是JSON对象封装的一个值。
 		supportedViewfinderSettings				// 支持的取景器列表
 		
 ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
-QMediaRecorder		
+QMediaRecorder	// 多媒体录音或录视频
+
+
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
+QAbstractVideoSurface	// 视频流显示基类
+①概述:
+	1.QAbstractVideoSurface类定义视频制作者用于与视频演示表面交互操作的标准接口。
+	2.您可以将此接口子类化，以接收来自解码媒体或相机等源的视频帧，以执行您自己的处理。
+	3.视频表面呈现连续相同格式的QVideoFrame实例流，其中每个帧的格式与开始演示时提供的流格式兼容。
+	4.每个帧可以具有时间戳信息，表面可以使用该信息来决定何时显示该帧。
+	5.表面可以呈现的像素格式列表由supportedPixelFormats（）函数给出，
+		isFormatSupported（）函数将测试是否支持视频表面格式。
+		如果不支持格式，nearestFormat（）函数可能能够建议类似的格式。
+	6.start（）函数采用支持的格式并启用视频表面。
+		一旦启动，曲面将开始显示它在present（）函数中接收的帧。	
+②实现QAbstractVideoSurface的子类--实现虚函数
+	1.需描述您支持的像素格式（以及nearestFormat（）函数）。
+	2.您必须实现present（）函数以及start（）和stop（）函数。
+	注意：您必须在实现中调用start（）和stop（）的基类实现。	
+
+
+
 ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
 QCameraImageCapture	// 记录媒体图像内容
 示例:
 	camera = new QCamera;
 	viewfinder = new QCameraViewfinder();
 	viewfinder->show();
-	camera->setViewfinder(viewfinder);
+	camera->setViewfinder(viewfinder);	// 安卓不适用
 	imageCapture = new QCameraImageCapture(camera);
 	imageCapture->set
 	camera->setCaptureMode(QCamera::CaptureStillImage);
@@ -3538,7 +3566,7 @@ QCameraImageCapture	// 记录媒体图像内容
 
 	
 ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
-QCameraViewFinder	// 提供一个取景器窗口
+QCameraViewFinder	// 提供一个取景器窗口, 安卓中不适用(但是也要设置, 否则相机初始化失败)
 	取景器，用于设置摄像头的采集参数
 示例:
 	camera = new QCamera;
@@ -3548,6 +3576,9 @@ QCameraViewFinder	// 提供一个取景器窗口
 	imageCapture = new QCameraImageCapture(camera);	// 设置图像捕获器
 	camera->setCaptureMode(QCamera::CaptureVideo);	// 设置捕获模式
 	camera->start();	// 开始捕获	
+
+
+
 
 ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
 【三】QCameraViewfinderSettings 	// 提供了一组取景器的设置。
@@ -3767,15 +3798,6 @@ QVideoFrame
 			dump(QString("byteOrder:    ") + QString::number(fmt.byteOrder()));
 		}
 
-▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
-【三】camera组件
-①概述
-	QCamera类为系统摄像机设备提供接口。
-	QCamera可配合QCameraViewfinder进行取景器显示，
-	QMediaRecorder进行视频录制，
-	QCameraImageCapture进行图像拍摄。
-	您可以使用QCameraInfo列出可用的相机并选择使用哪一个。
-②
 
 
 ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
