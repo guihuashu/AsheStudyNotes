@@ -1698,9 +1698,27 @@ void start_push_flow()
 	sudo apt-get install yasm	// 汇编工具
 	sudo apt-get install make	
 ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
-【五】在Ubuntu下交叉编译ffmpeg的android脚本
-		unzip android-ndk-r20-linux-x86_64.zip
-		tar -xjf ffmpeg-4.1.tar.bz2
+【五】在Ubuntu下交叉编译安卓使用的ffmpeg
+	①先编译libx264(ffmpeg中需要引用这个库)
+		// http://www.videolan.org/developers/x264.html
+		export NDK=/work/system/ffmpeg/android-ndk-r14b
+		export PLATFORM=$NDK/platforms/android-21/arch-arm
+		export TOOLCHAIN=$NDK/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64
+		export CPU=arm7-a
+		export PREFIX=$PWD/tmp/$CPU
+		./configure \
+				--prefix=$PREFIX \
+				--disable-shared \
+				--enable-static \
+				--enable-pic \
+				--enable-strip \
+				--enable-thread \
+				--enable-asm \
+				--host=arm-linux-androideabi \
+				--cross-prefix=$TOOLCHAIN/bin/arm-linux-androideabi- \
+				--sysroot=$PLATFORM \
+				--extra-cflags="-Os -fpic" \
+				--extra-ldflags=""
 		
 	①编写交叉编译的脚本
 		//注意: 
@@ -1747,7 +1765,7 @@ void start_push_flow()
 			--disable-postproc \
 			--disable-avdevice \
 			--disable-symver \
-			--disable-stripping \
+			--disable-stripping 
 		//注意: 
 			1.编写脚本时要删除注释
 			2.\后面不能留任何东西, 包括空格, 否则报错
