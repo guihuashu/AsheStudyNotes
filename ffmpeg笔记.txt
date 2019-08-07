@@ -315,7 +315,7 @@ http://ffmpeg.org/doxygen/3.2/index.html	// 官方API文档
 	// 河东公网服务器
 	ffplay rtmp://hdlcontrol.com/live/stream   -fflags nobuffer -flags low_delay  -strict experimental
 	ffplay rtmp://hdlcontrol.com/live/stream   -fflags nobuffer  -max_delay 0 -strict experimental
-	
+	ffplay rtmp://hdlcontrol.com/live/stream	-fflags nobuffer -strict experimental
 	
 	rtmp://172.16.24.211/live	
 	ffplay rtmp://hdlcontrol.com/live/stream
