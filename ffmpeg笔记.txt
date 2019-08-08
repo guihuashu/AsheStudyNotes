@@ -309,10 +309,7 @@ http://ffmpeg.org/doxygen/3.2/index.html	// 官方API文档
 
 	// 无延迟
 	ffplay -i udp://172.16.24.169:2000    -fflags nobuffer -flags low_delay  -strict experimental
-	
 	ffplay -i rtmp://172.16.24.211/live   -fflags nobuffer -flags low_delay  -strict experimental
-	
-	// 河东公网服务器
 	ffplay rtmp://hdlcontrol.com/live/stream   -fflags nobuffer -flags low_delay  -strict experimental
 	ffplay rtmp://hdlcontrol.com/live/stream   -fflags nobuffer  -max_delay 0 -strict experimental
 	ffplay rtmp://hdlcontrol.com/live/stream	-fflags nobuffer -strict experimental
@@ -1000,8 +997,33 @@ int  swr_convert (struct SwrContext *s,
 void swr_free(struct SwrContext **s)	// 释放
 
 -------------------------------------------------------------------------------------------------------------------
-
-	
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+						H264编码器私有属性
+▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
+	①详述地址
+		https://www.cnblogs.com/lidabo/p/7419393.html	
+		https://www.jianshu.com/p/b46a33dd958d	
+	②编码速度
+		--preset的参数主要调节编码速度和质量的平衡，
+			有ultrafast、superfast、veryfast、faster、fast、medium、slow、slower、veryslow、placebo这10个选项，从快到慢。
+	③编码延迟
+		--tune的参数主要配合视频类型和视觉优化的参数，或特别的情况。
+			tune的值有：
+			film：       电影、真人类型；
+			animation：  动画；
+			grain：      需要保留大量的grain时用；
+			stillimage：  静态图像编码时使用；
+			psnr：      为提高psnr做了优化的参数；
+			ssim：      为提高ssim做了优化的参数；
+			fastdecode： 可以快速解码的参数；
+			zerolatency：零延迟，用在需要非常低的延迟的情况下，比如电视电话会议的编码。
+	④编码压缩率
+		CRF(Constant Rate Factor): 范围 0-51: 0是编码毫无丢失信息, 23 is 默认, 51 是最差的情况。相对合理的区间是18-28. 
+		值越大，压缩效率越高，但也意味着信息丢失越严重，输出图像质量越差。
+	⑤举例
+		av_opt_set(_vEncodeCtx->priv_data, "preset ", "ultrafast ", 0); //设置priv_data的option
+		av_opt_set(_vEncodeCtx->priv_data, "tune", "zerolatency", 0); //设置priv_data的option
+		av_opt_set(_vEncodeCtx->priv_data, "x264opts", _vArgs.CRF.c_str(), 0);  // crf:0-51, 0表示不压缩, 51表示最高压缩比
 ▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
 					第一章	ffmpeg控制
 ▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
@@ -1027,12 +1049,6 @@ void swr_free(struct SwrContext **s)	// 释放
 	②设置合适的Gop
 		AVCodecContext->gop_size = 50;	// 关键帧会影响其他帧的质量
 ▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
-【四】设置h264编码器的参数
-		AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_H264);
-		vc = avcodec_alloc_context3(codec);			// AVCodecContext
-		av_opt_set(vc->priv_data, "preset", "superfast", 0); //设置priv_data的option
-		av_opt_set(vc->priv_data, "tune", "zerolatency", 0); //设置priv_data的option
-▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
 【四】控制.推流后马上就能及时看到推流的视频
 	// 设置合适的GOP
 		AVCodecContext->gop_size = 10;		// B帧和P帧都依赖于I帧才能解析,gop_size太大的话,要等到下一个I帧才能看到视频 
@@ -1049,9 +1065,14 @@ void swr_free(struct SwrContext **s)	// 释放
 	// 	ffmpeg -re -f dshow -i video="HD USB Camera" -r 30   -fflags discardcorrupt -fflags nobuffer -flags low_delay  -strict experimental -tune zerolatency -vcodec libx264 -preset ultrafast -acodec libfaac -f mpegts udp://172.16.24.169:2000
 	①设置编码器（h264）的参数
 		AVCodec *codec = avcodec_find_encoder(AV_CODEC_ID_H264);
-		vc = avcodec_alloc_context3(codec);			// AVCodecContext
+		AVCodecContext *vc = avcodec_alloc_context3(codec);			// AVCodecContext
+		// 设置编码速度
 		av_opt_set(vc->priv_data, "preset", "superfast", 0); //设置priv_data的option
+		// 设置编码器延迟
 		av_opt_set(vc->priv_data, "tune", "zerolatency", 0); //设置priv_data的option
+		// 置编码器的压缩率, crf:0-51, 0表示不压缩, 51表示最高压缩比
+		av_opt_set(vc->priv_data, "x264opts", "crf=20", 0);  
+		
 	②降低最大b帧数
 		AVCodecContext->max_b_frames = 0;	// B帧依赖于后一个I帧, 所以max_b_frames越大,延迟越大
 	③设置合适的Gop
@@ -1413,8 +1434,8 @@ void start_push_flow()
 		// 优化推流延迟, 设置编码器的的私有属性来优化推流延迟	
 	av_opt_set(encoderCtx->priv_data, "preset", "superfast", 0); //设置priv_data的option
 	av_opt_set(encoderCtx->priv_data, "tune", "zerolatency", 0); //设置priv_data的option
+    av_opt_set(_vEncodeCtx->priv_data, "x264opts", _vArgs.CRF.c_str(), 0);  // crf:0-51, 0表示不压缩, 51表示最高压缩比
 	ret = avcodec_open2(encoderCtx, 0, 0);	// 打开编码器(编码器开始待解码)
-
 
 	/* 4.创建输出格式上下文,并添加视频流 */
 	ret = avformat_alloc_output_context2(&outFmtCtx, 0, "flv", outUrl); 
