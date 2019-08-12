@@ -317,6 +317,8 @@ http://ffmpeg.org/doxygen/3.2/index.html	// 官方API文档
 	rtmp://172.16.24.211/live	
 	ffplay rtmp://hdlcontrol.com/live/stream
 	
+	注意:
+		如果推了两个流,但是只拉到了一个, 可以在终端中再次尝试
 	
 ▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃▃	
 					第一章	libavdevice
@@ -1081,10 +1083,7 @@ void swr_free(struct SwrContext **s)	// 释放
 		AVCodecContext->thread_count = 8;	// 电脑的最大线程数
 	⑤将编解码延迟帧数设置为0
 		vc->delay = 0;
-		
-	⑥优化格式上下文的,交错的最大缓冲持续时间	
-		AVFormatContext->max_interleave_delta = 0;
-		//AVFormatContext->max_delay = 0;
+
 	⑦选择合适图像转换算法
 		SWS_BICUBIC.. // 可以根据自己去试
 		
@@ -1230,9 +1229,10 @@ void swr_free(struct SwrContext **s)	// 释放
 	//a 创建输出封装器上下文
 	AVFormatContext *ic = NULL;
 	ret = avformat_alloc_output_context2(&ic, 0, "flv", outUrl);
+#if 0   // 这个不能设置, 否则丢失音频流
 	ic->max_interleave_delta = 0;			// 交叉存取的最大延迟
 	ic->max_delay = 0;
-
+#endif
 	//b 添加音频流 
 	AVStream *as = avformat_new_stream(ic, NULL);
 	as->codecpar->codec_tag = 0;
@@ -1377,10 +1377,10 @@ void swr_free(struct SwrContext **s)	// 释放
 【三】创建一个带有视频流的输出上下文
 
 	avformat_alloc_output_context2(&ic, 0, "flv", outUrl);
+#if 0   // 这个不能设置, 否则丢失音频流	
 	ic->max_interleave_delta = 0;
-	
-	// 优化
 	ic->max_delay = 0;
+#endif
 	AVStream *vs = avformat_new_stream(ic, NULL);
 	vs->codecpar->codec_tag = 0;
 
@@ -1439,9 +1439,10 @@ void start_push_flow()
 
 	/* 4.创建输出格式上下文,并添加视频流 */
 	ret = avformat_alloc_output_context2(&outFmtCtx, 0, "flv", outUrl); 
-		// 优化优化推流延迟
+#if 0   // 这个不能设置, 否则丢失音频流
 	outFmtCtx->max_interleave_delta = 0;			// 交叉存取的最大延迟
 	outFmtCtx->max_delay = 0;
+#endif
 	AVStream *vs = avformat_new_stream(outFmtCtx, NULL);	// outFmtCtx中添加视频流
 	vs->codecpar->codec_tag = 0;							// 编码器标记为空
 	avcodec_parameters_from_context(vs->codecpar, encoderCtx); // 从encoderCtx中获取编码参数
