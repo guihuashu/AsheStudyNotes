@@ -1224,7 +1224,7 @@ void swr_free(struct SwrContext **s)	// 释放
 	ret = avcodec_open2(ac, 0, 0);
 	cout << "avcodec_open2 success!" << endl;
 
-
+ 
 	///5 输出封装器和音频流配置
 	//a 创建输出封装器上下文
 	AVFormatContext *ic = NULL;
