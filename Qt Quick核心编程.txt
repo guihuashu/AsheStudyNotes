@@ -15,7 +15,7 @@ Application
 
 QML根对象
 	Window
-	ApplicationWindow
+	ApplicationWindow	// 包含菜单工具条
 	Item
 
 
