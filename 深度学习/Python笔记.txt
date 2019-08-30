@@ -7,17 +7,54 @@
 	numpy.array([5,10,15,20])				// 构造一个行向量
 	numpy.array([[5,10,15,20],[5,10,15,20]]) // 构造一个矩阵
 	numpy.random.randn(1,5)					// 构建一个由随机数组成的1行5列矩阵
-	matrix.shape		// 矩阵matrix的结构
-	matrix.dtype		// 打印矩阵matrix中数据的类型
-	matrix.[i-1, j-1]   // 矩阵matrix中位于i行j列的值
-	vector.([0:3])		// 取出行向量vector中的第0,1,2项,并构造为一个新矩阵
-	matrix.[:,1]		// 取出所有行的第1列中的元素,构成一个新矩阵
-②查找函数的帮助
+	print(help(numpy.array)) // 列出矩阵操作相关的函数
+	numpy.arange(15)		 // 构造有15个元素的行向量
+	numpy.arange(0,20,5)	 // 构造一个行向量,元素从0开始,每个+5,最后一个元素小于20;及[0,5,10,15]
+	mat = np.arange(3)		 // 构造有三个元素的行向量	
+	numpy.zeros((3,4),dtype=np.int32)	// 构建一个3x4的矩阵,所有元素都被初始化为0。元素类型默认为float类型
+	numpy.ones((2,3,4),dtype=np.int32) // 构造一个所有元素都为1的2x3x4的三阶矩阵
+	numpy.random				// 进入随机数模块
+	numpy.random.random((i,j))  // 调用random模块的random函数,构造一个i行,j列的矩阵,袁术为随机数 
+	numpy.linspace(0,2*pi,100)		// 从0开始到2π, 取100个数,间隙一样	
+	numpy.dot(A,B)			// 矩阵A乘矩阵B
+	numpy.exp(B)			// 矩阵B中的每一项都为: e^原来元素的值
+	numpy.sqrt(B)			// 矩阵B中的每一项都为: 根号(原来元素的值)
+	numpy.floor(B)			// 矩阵B中的每一项都想先取整
+②其他
 	import numpy
 	print(help(numpy.array))	
-②numpy基础结构
+	import numpy as np	// 为导入的numpy库指定一个别名为np
+	from numpy import pi // 从numpy库中导入符号pi(π)
+③numpy基础结构
 	: 表示所有的
-
+④numpy矩阵基础
+	matrix[i-1, j-1]   		// 矩阵matrix中位于i行j列的值
+	vector.([0:3])			// 取出行向量vector中的第0,1,2项,并构造为一个新矩阵
+	matrix[:,1]				// 取出所有行的第1列中的元素,构成一个新矩阵
+	matrix[:,0:2]			// 取出所有行的第0-1列,构造为一个新矩阵
+	matrix == 5				// 将matrix中的每一个元素与5比较,将返回的布尔值构建为一个矩阵
+	matrix < 5				// 将matrix中的每一个元素与5比较,将返回的布尔值构建为一个矩阵
+	boolmat = (mat ==5) 	// boolmat可作为mat中为5的元素的行索引
+	matrix[boolMatrix, :]   // 得到值为5的那一行
+	matrix.shape			// 矩阵matrix的结构
+	matrix.reshape(i,j)		// 将matrix重新构造为一个i行j列的矩阵
+	matrix.reshape(i,-1)	// 将matrix重新构造为一个i行,n/i列
+	matrix.dtype			// 打印矩阵matrix中数据的类型
+	matrix.astype(type)		// 将matrix矩阵中的所有元素的类型转换为type类型
+	matrix.min()			// matrix中值最小的元素
+	matrix.mmax()			// matrix中值最大的元素
+	matrix.sum(axis=i)		// i表示维度。i为1时分别求各行的和，i为0时分别求各列的和
+	matrix.ndim				// 矩阵的维度
+	matrix.size				// 矩阵的元素总个数
+	matrix ** i				// 得到一个新矩阵,其中每一个元素都为原来值的i次方。注意:matrix矩阵为改变
+	matA * matB				// 矩阵matA与矩阵matB对应的元素相乘
+	matA.dot(matB)			// 矩阵matA乘以矩阵matB
+	matA.ravel()			// 将matA变为行向量
+	
+⑤Python逻辑运算符
+	& 逻辑与
+	| 逻辑或
+	
 
 
 
