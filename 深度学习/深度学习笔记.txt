@@ -1,0 +1,40 @@
+机器学习是深度学习的基础
+资源： github， kaggle
+
+图像的挑战
+	1.照射角度
+	2.光照强度
+	3.形状改变
+	4.部分遮蔽
+	5.背景混入
+常规套路
+	1.收集数据并给定标签
+	2.训练一个分类器
+	3.测试，评估
+K-近领算法
+	// 不需要训练集进行训练,训练时间浮渣度为0
+	1.计算已知类别数据集中的点与当前点的距离
+	2.按照距离依次排序
+	3.选取与当前点距离最小的K个点
+	4.确定前K个点所在类别的出现概率
+	5.返回前K个点出现频率最高的类别作为当前点预测分类
+anaconda 安装Python第三方库
+	anaconda search -t conda tensorflow
+	anaconda show jjhelmus/tensorflow	
+	 conda install --channel https://conda.anaconda.org/jjhelmus tensorflow
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	

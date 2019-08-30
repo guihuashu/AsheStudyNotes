@@ -1,0 +1,23 @@
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂
+				numpy计算库
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂
+①基本函数	
+	//用numpy打开数据
+	numpy.genfromtxt(文件路径, delimiter=内容分隔符, dtype=以书面方式读取文件)
+	numpy.array([5,10,15,20])				// 构造一个行向量
+	numpy.array([[5,10,15,20],[5,10,15,20]]) // 构造一个矩阵
+	numpy.random.randn(1,5)					// 构建一个由随机数组成的1行5列矩阵
+	matrix.shape		// 矩阵matrix的结构
+	matrix.dtype		// 打印矩阵matrix中数据的类型
+	matrix.[i-1, j-1]   // 矩阵matrix中位于i行j列的值
+	vector.([0:3])		// 取出行向量vector中的第0,1,2项,并构造为一个新矩阵
+	matrix.[:,1]		// 取出所有行的第1列中的元素,构成一个新矩阵
+②查找函数的帮助
+	import numpy
+	print(help(numpy.array))	
+②numpy基础结构
+	: 表示所有的
+
+
+
+
