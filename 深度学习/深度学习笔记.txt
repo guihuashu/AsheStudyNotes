@@ -22,14 +22,39 @@ anaconda 安装Python第三方库
 	anaconda search -t conda tensorflow
 	anaconda show jjhelmus/tensorflow	
 	 conda install --channel https://conda.anaconda.org/jjhelmus tensorflow
+正则惩罚项
+	用于惩罚权重, 
+		比如 X = 1,0,0,0; w1 = 1,0,0,0; w2=1/4, 1/4, 1/4; w1X = 1, W2X也等于1; 但是w1中只考虑到了一个特征
+		
 
+		这时w1的惩罚回避w2重
+评价一个模型: 
+	损失函数 + 正则惩罚项
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+			Soft分类器: 用于分类
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+Softmax的输出(归一化的分类概率)
+	1.先把得分值映射到一个大的区间(e^x)
+	2.归一化操作, 得到一个概率值
+	3.那正确类别计算损失值: = -log(概率)
+损失函数: 交叉熵损失
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+			最优化形象解读
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+梯度下降: 通过优化权重w, 来使损失函数达到最小值来求取最优解
 
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+			反向传播
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+前向传播:
+	1.由输入数据和权重参数相乘后得到得分值
+	2.由得分值计算的到一个loss值
+反向传播:
+	loss值一步一步往回传,得到权重w更新的力度
 
-
-
-
-
-
+加法门单元:均等分配（x+y=q）
+MAX门单元: 梯度分给比较大的值(3x+2y=q)
+乘法门单元: 互换的感觉(xy=q)
 
 
 
