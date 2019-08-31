@@ -1,60 +1,191 @@
-﻿▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂
-				numpy计算库
+﻿做竞赛题,比如泰坦里克号船员获救
 ▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂
-①基本函数	
-	//用numpy打开数据
-	numpy.genfromtxt(文件路径, delimiter=内容分隔符, dtype=以书面方式读取文件)
-	numpy.array([5,10,15,20])				// 构造一个行向量
-	numpy.array([[5,10,15,20],[5,10,15,20]]) // 构造一个矩阵
-	numpy.random.randn(1,5)					// 构建一个由随机数组成的1行5列矩阵
-	print(help(numpy.array)) // 列出矩阵操作相关的函数
-	numpy.arange(15)		 // 构造有15个元素的行向量
-	numpy.arange(0,20,5)	 // 构造一个行向量,元素从0开始,每个+5,最后一个元素小于20;及[0,5,10,15]
-	mat = np.arange(3)		 // 构造有三个元素的行向量	
-	numpy.zeros((3,4),dtype=np.int32)	// 构建一个3x4的矩阵,所有元素都被初始化为0。元素类型默认为float类型
-	numpy.ones((2,3,4),dtype=np.int32) // 构造一个所有元素都为1的2x3x4的三阶矩阵
-	numpy.random				// 进入随机数模块
-	numpy.random.random((i,j))  // 调用random模块的random函数,构造一个i行,j列的矩阵,袁术为随机数 
-	numpy.linspace(0,2*pi,100)		// 从0开始到2π, 取100个数,间隙一样	
-	numpy.dot(A,B)			// 矩阵A乘矩阵B
-	numpy.exp(B)			// 矩阵B中的每一项都为: e^原来元素的值
-	numpy.sqrt(B)			// 矩阵B中的每一项都为: 根号(原来元素的值)
-	numpy.floor(B)			// 矩阵B中的每一项都想先取整
-②其他
-	import numpy
-	print(help(numpy.array))	
-	import numpy as np	// 为导入的numpy库指定一个别名为np
-	from numpy import pi // 从numpy库中导入符号pi(π)
-③numpy基础结构
-	: 表示所有的
-④numpy矩阵基础
-	matrix[i-1, j-1]   		// 矩阵matrix中位于i行j列的值
-	vector.([0:3])			// 取出行向量vector中的第0,1,2项,并构造为一个新矩阵
-	matrix[:,1]				// 取出所有行的第1列中的元素,构成一个新矩阵
-	matrix[:,0:2]			// 取出所有行的第0-1列,构造为一个新矩阵
-	matrix == 5				// 将matrix中的每一个元素与5比较,将返回的布尔值构建为一个矩阵
-	matrix < 5				// 将matrix中的每一个元素与5比较,将返回的布尔值构建为一个矩阵
-	boolmat = (mat ==5) 	// boolmat可作为mat中为5的元素的行索引
-	matrix[boolMatrix, :]   // 得到值为5的那一行
-	matrix.shape			// 矩阵matrix的结构
-	matrix.reshape(i,j)		// 将matrix重新构造为一个i行j列的矩阵
-	matrix.reshape(i,-1)	// 将matrix重新构造为一个i行,n/i列
-	matrix.dtype			// 打印矩阵matrix中数据的类型
-	matrix.astype(type)		// 将matrix矩阵中的所有元素的类型转换为type类型
-	matrix.min()			// matrix中值最小的元素
-	matrix.mmax()			// matrix中值最大的元素
-	matrix.sum(axis=i)		// i表示维度。i为1时分别求各行的和，i为0时分别求各列的和
-	matrix.ndim				// 矩阵的维度
-	matrix.size				// 矩阵的元素总个数
-	matrix ** i				// 得到一个新矩阵,其中每一个元素都为原来值的i次方。注意:matrix矩阵为改变
-	matA * matB				// 矩阵matA与矩阵matB对应的元素相乘
-	matA.dot(matB)			// 矩阵matA乘以矩阵matB
-	matA.ravel()			// 将matA变为行向量
+					numpy计算库
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂
+	①基本函数	
+		//用numpy打开数据
+		numpy.genfromtxt(文件路径, delimiter=内容分隔符, dtype=以书面方式读取文件)
+		numpy.array([5,10,15,20])				// 构造一个行向量
+		numpy.array([[5,10,15,20],[5,10,15,20]]) // 构造一个矩阵
+		numpy.random.randn(1,5)					// 构建一个由随机数组成的1行5列矩阵
+		print(help(numpy.array)) // 列出矩阵操作相关的函数
+		numpy.arange(15)		 // 构造有15个元素的行向量
+		numpy.arange(0,20,5)	 // 构造一个行向量,元素从0开始,每个+5,最后一个元素小于20;及[0,5,10,15]
+		mat = np.arange(3)		 // 构造有三个元素的行向量	
+		numpy.zeros((3,4),dtype=np.int32)	// 构建一个3x4的矩阵,所有元素都被初始化为0。元素类型默认为float类型
+		numpy.ones((2,3,4),dtype=np.int32) // 构造一个所有元素都为1的2x3x4的三阶矩阵
+		numpy.random				// 进入随机数模块
+		numpy.random.random((i,j))  // 调用random模块的random函数,构造一个i行,j列的矩阵,袁术为随机数 
+		numpy.linspace(0,2*pi,100)		// 从0开始到2π, 取100个数,间隙一样	
+		numpy.dot(A,B)			// 矩阵A乘矩阵B
+		numpy.exp(B)			// 矩阵B中的每一项都为: e^原来元素的值
+		numpy.sqrt(B)			// 矩阵B中的每一项都为: 根号(原来元素的值)
+		numpy.floor(B)			// 矩阵B中的每一项都向下取整
+		numpy.hstack(A,B)		// 对矩阵A和B进行横向拼接
+		numpy.vstack(A,B)		// 对矩阵A和B进行纵向拼接
+		numpy.hsplit(A,i)		// 将矩阵A横向平均分割成i份, A不变
+		numpy.vsplit(A,i)		// 将矩阵A纵向平均分割成i份,A不变
+		numpy.hsplit(A,i,j)		// 将矩阵A横向分割,在i+1和j+1行的位置切断
+		numpy.vsplit(A,i,j)		// 将矩阵A纵向分割,在i+1和j+1列的位置切断
+		numpy.tile(mat,(i,j))	// 将矩阵mat扩展为i行j列
+		numpy.sort(mat,axis=i)	// i=1: 将mat的行由小到大排序; i=0: 将mat的列由小到大排序
+		a=numpy.argsort(vec)	// 得到行向量vec中由小到大的索引
+		vec[a]					// 得到vec按照a排序后的结果
+	②其他
+		import numpy
+		print(help(numpy.array))	
+		import numpy as np		// 为导入的numpy库指定一个别名为np
+		from numpy import pi 	// 从numpy库中导入符号pi(π)
+		id(mat)					// 打印出变量mat的地址		
+		
+	③numpy基础结构
+		: 表示所有的
+		Nan缺失值
+	④numpy矩阵基础
+		matrix[i-1, j-1]   		// 矩阵matrix中位于i行j列的值
+		vector.([0:3])			// 取出行向量vector中的第0,1,2项,并构造为一个新矩阵
+		matrix[:,1]				// 取出所有行的第1列中的元素,构成一个新矩阵
+		matrix[:,0:2]			// 取出所有行的第0-1列,构造为一个新矩阵
+		matrix == 5				// 将matrix中的每一个元素与5比较,将返回的布尔值构建为一个矩阵
+		matrix < 5				// 将matrix中的每一个元素与5比较,将返回的布尔值构建为一个矩阵
+		boolmat = (mat ==5) 	// boolmat可作为mat中为5的元素的行索引
+		matrix[boolMatrix, :]   // 得到值为5的那一行
+		matrix.shape			// 矩阵matrix的结构
+		vec.shape = (6,2)		// 将vec重新构造为一个矩阵
+		matrix.reshape(i,j)		// 将matrix重新构造为一个i行j列的矩阵
+		matrix.reshape(i,-1)	// 将matrix重新构造为一个i行,n/i列
+		matrix.dtype			// 打印矩阵matrix中数据的类型
+		matrix.astype(type)		// 将matrix矩阵中的所有元素的类型转换为type类型
+		matrix.min()			// matrix中值最小的元素
+		matrix.mmax()			// matrix中值最大的元素
+		matrix.sum(axis=i)		// i表示维度。i为1时分别求各行的和，i为0时分别求各列的和
+		matrix.ndim				// 矩阵的维度
+		matrix.size				// 矩阵的元素总个数
+		matrix.T				// 得到matrix的转置矩阵,matrix未改变
+		matrix ** i				// 得到一个新矩阵,其中每一个元素都为原来值的i次方。注意:matrix矩阵为改变
+		matA * matB				// 矩阵matA与矩阵matB对应的元素相乘
+		matA.dot(matB)			// 矩阵matA乘以矩阵matB
+		matA.ravel()			// 将matA变为行向量
+		mat[0,4] = 5			// 将mat对应元素的值设置为5
+		mat.argmax(axis=i)		// i=0:找出矩阵mat中每一行的最大值的位置; i=1:找出矩阵mat中每一列的最大值的位置
+		
+	⑤Python逻辑运算符
+		& 	逻辑与
+		| 	逻辑或
+		is  // c is a, c和a是否为同一个变量,而不是比较他们值
+	⑥numpy复制操作
+		a = b			// a和b共用一段内存, a,b变化都会影响到对方的值
+		b = a.view() 	// a和b不共用一段内存,但是a和b中的值共用,既是a,b变化都会影响到对方的值
+		b = a.copy() 	// a和b不共用一段内存,a和b中的值不共用,既是a,b变化都不会影响到对方的值
+		
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂
+					pandas 库（数据处理）
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂
+①import pandas
+	Csv = pandas.read_csv("文件路径")	// 读取.csv文件(以逗号为分隔符)
+	type(Csv)					// csv的数据结构
+	Csv.dtypes					// csv每个元素的变量类型
+	print(help(pandas.read_csv))
+	Csv.head()	// 得到前5行数据
+	Csv.head(i)	// 得到前i行数据
+	Csv.tail()	// 得到后5行数据
+	Csv.tail(i)	// 得到后i行数据
 	
-⑤Python逻辑运算符
-	& 逻辑与
-	| 逻辑或
-	 
+	Csv.shape	// 维度(样本数,每个样本的列数)
+	Csv.loc[i]	// 取出第i+1条(行)数据
+	Csv.loc[i:j]	// 取出i+1条(行)到j+i条的数据
+	Csv.loc[[i,j,k]]			// 取出第i+1条(行),第j+1条,第k+1条的数据
+	
+	Csv["列名"] 				// 取出一个属性(列)
+	Csv[["列名1", "列名2"...]]  // 取出多个属性(列)
+	Csv["列名1"] +-*/ Csv["列名2"] // 列1和列二对应的元素+=x/
+	Cholestrl_(mg)
+	Csv["新列名"] = 新列		// Csv中加入一列新数据
+	Csv["列名"].max()			// 列中的最大值
+	Csv["列名"].max()			// 列中的最小值
+	
 
+②列查找
+		查找以'(g)'结尾的列
+			nameList = foods.columns.tolist()	// foods中的属性转换为一个列表
+			glist = []					// 空列表
+			for l in nameList:			// 遍历nameList, l表示nameList中的每一项
+				if l.endswith('(g)'):	// 如果字符l是以'(g)'结尾的
+					glist.append(l)		// 将l放入glist列表
+			gfoods = foods[glist]		// 取出foods中包含了glist列表中属性的列
+			print(gfoods.head(3))		// gfoods中的前三行	
+③排序
+		Csv.sort_values("列名", inplace=True, ascending=False)	// 将sort_values对应的列中的数据进行由小到大排序,Csv中的列被修改为排序后的结果
+			inplace=True：不创建新的对象，直接对原始对象进行修改；
+			inplace=False：对数据进行修改，创建并返回新的对象承载其修改结果。	
+			ascending=False : 升序
+			ascending=True  : 降序
+④缺失值操作
+	[1]找出缺失值
+		age = Csv["Age"]			// 属性名为"Age"的列
+		bool列 = pandas.isnull(age)	// 判断age中的每一个元素是否为空值(NAN),得到一个bool列
+		age[bool列]				    // 得到age中对应于bool列为True的元素
+		len[bool列]					// bool列有多少个元素
+⑤求平均值
+	方法一:
+		import pandas as pd
+		import numpy as np
+		ts = pd.read_csv("titanic_train.csv")
+		age = ts["Age"]							// 得到对应的列
+		age_is_null = pd.isnull(age)			// 得到一个元素值是否为空的bool列
+		haveAge = age[age_is_null == False]		// 剔除值为空的元素
+		avg = sum(haveAge) / len(haveAge)		// 求平均值
+		print(avg)
+	方法二
+		import pandas as pd
+		import numpy as np
+		ts = pd.read_csv("titanic_train.csv")
+		age = ts["Age"]							// 得到对应的列
+		print(age.mean())						// 求age中的平均值(自动剔除为空值的项)
+		
+		
+⑥核心数据结构
+	print(food_info.dtypes)
+	DataFrame
+	int64
+	int32
+	float64
+	object		// '字符'
+	bool
+	datetime	// 时间类型
+⑦统计
+	
 
-
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂
+					竞赛项目
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂
+泰坦里克号船员获救:
+	passengerId: // 乘客ID
+	Survived:	 // 是否获救(0,1)
+	Pclass:		 // 船仓等级(1,2,3)
+	SibSp:		 // 同行的兄弟姐妹数量(1,2,3...)
+	parch:		 // 同行的父母和孩子的数量(1,2,3...)
+	Ticket:      // 船票编号(没有影响,建模时不用)
+	Fare:		 // 船票价格(跟船仓等级挂钩)
+	Cabin:		 // 船舱标号(缺失值太多,不用)
+	Embarked:	 // 登船地点(SCQ)
+①分别求船仓等级为1,2,3的平均船票价格
+	import pandas as pd
+	import numpy as np
+	ts = pd.read_csv("titanic_train.csv")
+	classs = [1,2,3]		// 船舱等级
+	Pclass = ts["Pclass"]	// 船舱等级列
+	avgs = {}
+	for thisClass in classs:   
+		bools = (Pclass == thisClass)	// 船舱等级列中的值分别于1,2,3比较,得到bool列
+		tsFare = ts[bools]				// 保留ts中对应bools为True的行(得到Pclass为1,2,3的行的列表)
+		clsFare = tsFare["Fare"]		// 得到tsFare中属性为"Fare"的列
+		avg = clsFare.mean()			// 求"Fare"列的平均值
+		avgs[thisClass] = avg			// 将平均值付给一个集合
+	print(avgs)
+	
+	
+	
+	
+	
+	
