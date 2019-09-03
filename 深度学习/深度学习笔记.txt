@@ -56,10 +56,227 @@ Softmax的输出(归一化的分类概率)
 MAX门单元: 梯度分给比较大的值(3x+2y=q)
 乘法门单元: 互换的感觉(xy=q)
 
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+			神经网络整体架构
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+	输入层-->隐藏层1-->隐藏层二-->输出层
+	○x1		○		○			
+	○x2		○		○			○
+	○x3		○		○
+		  (w1)		(w2)
+	输入层: 	x1,x2,x3
+	权重w1: 输入层到隐藏层1之间的连线			
+	权重w2: 隐藏层1到隐藏层2之间的连线	
+	权重w3: 隐藏层2到输出层2之间的连线	
+	隐藏层1 = w1x
+	隐藏层2 = w2(w1x)
+	输出层  = w3[w2(w1x)]
 
+	神经网络是一个非线性的结构
+		f = W2max(0, W1x), max激活函数
+		
+	激活函数:(是一个非线性函数)
+		1.一些样本通过线性无法分开了, 需要用一些非线性函数来区分, 这些非线性函数称为激活函数
+		2.为什么需要激活函数?'
+			因为我们的输出结果的收敛不一定是线性的, 所以需要在线性函数wx的基础上使用激活函数。
+	单层神经网络
+		f = W2max(0,W1x)			// 线性函数和激活函数的组合 * W2
+	双层神经网络
+		f = W3max(0,W2max(0,W1x))	// 单层神经网络和激活函数的组合 * W3
+		
+	梯度消失现象:
+		1.底层权重的梯度是通过链式法则来计算的, 如果每一层的倒数都很小, 那么累乘后得到的底层权重的梯度就趋近与0
+		2.因为sigmoid函数的梯度消失现象太明显, 无法让权重更新, 所以讲退出历史舞台
+	ReLU函数
+		1.f(x)=max(0,x)
+		2.
 
+	一个神经元(对应一个权重)如果未加激活函数， 那么他相当于一条直线；所以神经元越多，分类效果越好
 
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+				过拟合
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+过拟合现象：
+	0.训练是的效果很好,测试时将其他区域中的点预测到了本区域,这就是过拟合现象
+	1.神经网络的过拟合现象很严重
+	2.神经元越多,郭力赫现象越严重
+正则化项在神经网络中的作用
+	正则化项： λw^2
 
-
-
+标准差
+	1.标准差是一组数据平均值分散程度的一种度量。
+	2.一个较大的标准差，代表大部分数值和其平均值之间差异较大；
+	3.一个较小的标准差，代表这些数值较接近平均值。
 	
+数据预处理
+	1.原始数据
+	2.0点中心数据
+		X -= np.mean(X, axis = 0)	// 先求各列的平均值,然后各个元素减去其列平均值,使数据分布在x轴两侧
+	3.剔除离谱的数据
+		X /= np.std(X,axis=0)
+权重初始化
+	注意: 各个权重的初始值不能是相同的一个值或者0
+	随机初始化
+		W = 0.01 * np.random.randn(D,H)
+	高斯初始化
+	b: 初始化为0	
+DROP-OUT	
+	一次迭代中参与连接的神经元个数(权重)百分比
+连续值离散化:
+	将一组值中的每一个值都贴上标签("OK",or"NO")
+sigmod函数的倒数 = x(1-x)	
+
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+				动手完成简单的神经网络
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+①定义一个三层的神经网络
+	   w0	  	激活1	  w1	  激活2
+	L0---->tmp1------>L1----->tmp2----->L2(输出0,1)
+
+	L1的行数 = x的行数
+	xw0 = L1 		// w0的行数=x的列数,  w0的列数=L1的列数=L1的特征数=4
+	L1w1 = L2		// w1的行数=L1的行数 = x的行数,w1的列数 = L2的特征数 
+②分析	
+	--------------------------------------------------------------------
+	假如: x为3x4的矩阵,L1层有4个神经元,L2是输出层(值为0或者1)
+	那么:
+		  x为5x3的矩阵
+		  所以:w0为3x4的矩阵
+		  L1为5x4的矩阵
+		  L2是一个列向量
+		  所以:w1为4x1的列向量
+	--------------------------------------------------------------------
+	1.假如激活1和激活2都为sigmoid函数
+	那么:
+		L1 = Sigmoid(xw0)
+		L2 = Sigmoid(L1)
+	--------------------------------------------------------------------
+	3.假如用均方误差来当做反向传播的目标函数,对权重进行优化
+		均方误差函数 = 1/2(y-y^)^2
+		均方误差函数的数 = (y-y^)
+③代码
+	import numpy as np
+	def sigmoid(x):           #对x进行sigmod函数操作
+		return 1/(1 + np.exp(-x)) 
+	def sigmoidDeriv(x):     #对x进行sigmod的导数函数操作 
+		return x*(1-x)
+	x = np.array([[0,0,1],
+				  [0,1,1],
+				  [1,0,1],
+				  [1,1,1],
+				  [0,0,1]]) # 输入有三个特征
+	y = np.array([[0],[1],[1],[0], [0]]) # 输入的标签分别为0和1
+	np.random.seed(1)
+	w0 = 2 * np.random.random((3,4)) -1 #使随机值范围在-1到1之间
+	w1 = 2 * np.random.random((4,1)) -1 #使随机值范围在-1到1之间
+	for i in range(1000000):
+		L0 = x
+		# 正向预测
+		L1 = sigmoid(np.dot(L0, w0))
+		L2 = sigmoid(np.dot(L1, w1))
+		
+		# (y-y^)是损失函数(1/2均方差)函数的倒数, 所以 y - L2表示w1对误差贡献的权重
+		L2Err = y - L2  
+		if (i%10000) == 0:
+			print("err" +str(i) +str("=") +str(np.mean(np.abs(L2Err))))
+		#L2Delta表示w1对L2Err做出的贡献 = w1的误差贡献权重L2Err * L2反向传播
+		# sigmoidDeriv(L2)表示反向传播
+		L2Delta = L2Err * sigmoidDeriv(L2)  #目的: 如果L2Err越大,对W1的更新越大,让L2Err比较快的收敛
+		
+		L1Err = np.dot(L2Delta, w1.T)	#因为 sigmoidDeriv(L1w) = L2
+		# L1Delta表示w1对L1Err做出的贡献
+		L1Delta = L1Err * sigmoidDeriv(L1) 
+		
+		w1 += np.dot(L1.T, L2Delta)	// 这儿的转置是为了计算误差
+		w0 += np.dot(L2.T, L1Delta)
+
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+				cifar分类任务
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+5000张训练图像, 500张测试数据,验证集500张(不断去调整参数)
+1.数据划分
+	5000张训练图像, 验证集500张(不断去调整参数), 500张测试数据
+2.神经网络层
+					ReLu
+	数据------>隐层------->输出层----->softmax分类器进行多分类--->得到图片时各类的预测概率
+	分析: 
+		# x为1xA的行向量
+		# 隐层有100个特征。 所以w1是一个Ax100的矩阵, b1是一个1x100的行向量
+		# 输出层表示各类别的概率(共10类),所以输出层有10个特征,是一个1x10的行向量
+		# 所以w2是一个100x10的矩阵, b2是一个1x10的行向量
+		# w1初始化为Ax100的矩阵
+
+3.数据初始化
+	def init(self,input_dim=3*32*32,hidden_dim=100,num_classes=10,weight_scale=le-3,reg=0.0):
+	A =  3 * 32 *32
+	input_dim =	A // 输入维度(32x32x3的RGB图片), 作为一个
+	didden_dim = 100		// 隐层的神经元个数
+	num_class = 10			// 输出类别数
+	weight_scale=le-3		// 用来缩小权重参数的初始化值, le-3: 10^-3
+	reg=0.0
+	
+	
+	self.params["w1"] = weight_scale * np.random.randn(input_dim,hidden_dim)
+	self.params["b1"] = np.zeros((1,hidden_dim))
+	self.params["w2"] = weight_scale * np.random.randn(hidden_dim,num_classes)
+	self.params["b2"] = np.zeros((1,num_classes))
+	
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+				卷积神经网络
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+【一】基础
+	①能力:
+		1.分类
+		2.检索(推荐系统)
+		3.检测袋一张图片中的多种物体, Detection
+		4.segmentation
+		5.图像分割
+		6.特征提取(人脸识别)
+		7.姿势识别
+		8.标志识别
+		9.手写字体识别
+		10.图像捕获(CNN + LSTM)
+		11.图像融合(风格+图片)
+	②卷积层
+		1.卷积层是立体的(宽度x高度x深度)	
+		//之前简单的神经网络就是全连接类型
+		2.卷积层的操作
+			Filter先将图片分成很多份,然后卷积层对Filter划分的区域进行特征提取,得到一副特征图。
+			//Filter的深度=输入的深度
+		3.卷积时可以指定N个Filter,来得到N个特征图
+		4.对卷积后得到的的特征图,任然可以进行卷积操作
+		4.将多个特征图进行压缩后,就得到卷积之后的结果
+		
+		
+	③卷积神经网络组成
+		1.输入层(INPUT)
+		2.卷积层(CONV)
+		3.激活函数(RELU)
+		4.池化层(POOL)
+		5.全连接层(FC)
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁		
+【二】卷积计算流程
+	①多次卷积
+			 卷积			  卷积				卷积			卷积
+		输入------>底层特征图------>中层特征图------>高层特征图------>可训练的分类器
+	②卷积的计算流程
+		1.Filter W0从输入X上选取与Filter同等大小的区域
+		2.区域1的各个深度与W0的各个深度进行内积(对应元素相乘之和)
+			及f1 = (W01, 区域01)
+			  f2 = (W02, 区域02)
+			  f3 = (W03, 区域03)
+		3.b0的初始值为(1,1,1)
+		4.第一层的输出结果= w0x+b = f1+f2+f3+b
+	
+	
+	
+	
+	
+	
+	
+	
+
+
+
+
+
