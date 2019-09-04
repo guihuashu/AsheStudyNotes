@@ -1,0 +1,24 @@
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+				Caffe介绍
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+【一】基础
+	①介绍
+		1.Caffe使用C++代码写的
+		2.Caffe提供了Python和MATLAB的调用接口
+		3.训练起来很方便
+	②Caffe的模块
+		Blob	用于处理输入数据Data和标签Lable
+		Layer	卷积层,池化层,激活函数层都是一个Layer
+		Net		所有层的组合,就形成了一个网络
+		Solver	用来进行梯度更新
+	③训练
+		1.不需要写代码就可以训练好一个卷积神经网络网络
+		2.我们需要做的事
+			1.转换数据,数据预处理(运行一个脚本)
+			2.定义一个Net(网络流程配置文件)				// prototxt文件
+			3.定义一个solver(配置训练所需的超参数文件)  // prototxt文件
+			4.训练
+【二】Caffe训练的整体模型
+	第一步: 数据转换
+		1.
+	
