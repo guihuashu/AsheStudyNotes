@@ -30,7 +30,6 @@
 		print(help(numpy.array)) // 列出矩阵操作相关的函数
 		numpy.arange(15)		 // 构造有15个元素的行向量
 		numpy.arange(0,20,5)	 // 构造一个行向量,元素从0开始,每个+5,最后一个元素小于20;及[0,5,10,15]
-		mat = np.arange(3)		 // 构造有三个元素的行向量	
 		numpy.zeros((3,4),dtype=np.int32)	// 构建一个3x4的矩阵,所有元素都被初始化为0。元素类型默认为float类型
 		numpy.ones((2,3,4),dtype=np.int32) // 构造一个所有元素都为1的2x3x4的三阶矩阵
 		numpy.random				// 进入随机数模块
