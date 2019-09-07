@@ -1,3 +1,17 @@
+caffe快速入门
+	1.看官网的示例
+	2.用起来简单,难点在安装上
+	3.caffe必不可缺的
+caffe安装
+	1.caffe官网上的例子全部要做一遍
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+				Linux Caffe环境搭建
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+
+	
+	
+	
+	
 ▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
 				Caffe介绍
 ▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
@@ -20,5 +34,32 @@
 			4.训练
 【二】Caffe训练的整体模型
 	第一步: 数据转换
-		1.
+		1.比如做分类的化,要将数据转换为LMDB的格式	// LMDB格式的数据的特点是读取速度快
+		2.转换的文本文件的格式
+			"[path/to/image.jpeg][Label]"
+		3.DHF5文件
+	第二步: 定义网络(定义网络中的所有层)
+	第三步: 定义Solver
+	第四步: 调用训练脚本
+		比如: ./build/tools/caffe train \
+				-gpu 0 \
+				-model path/to/trainval/prototxt \
+				-solver path/to/solver/prototxt \
+				-weights path/to/pretrained_weights.caffemodel
+【三】社区中训练好的现成的模型
+	Caffe：Model Zoo	// github社区
+	训练好的金典模型比如: AlexNet, VGG, GoogLeNet, ResNet, plus others
+
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+				Caffe使用实例
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+官网Examples, 如何训练一个网络				
+NotebookExamples, 如何应用一个训练好的网络
+				
+				
+				
+		
+		
+		
+		
 	

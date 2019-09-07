@@ -1,0 +1,38 @@
+	
+准备工作
+	1.bios设置
+		传统模式 禁用
+		安全启动模式 禁用	
+	2.制作ubuntu镜像	
+	3.从固态硬盘压缩出1G(用做ubuntu系统boot分区)
+ubuntu UELF安装
+	1.开机从u盘启动
+	2.选择"try install"
+	3.点击桌面上的"install"
+	4.选择中文简体
+	5.我不想连接网络
+	6.不安装第三方软件
+	7."其它选项"
+	8.分区
+		1.先删除 非"..windows Boot Manager"的EFI分区
+		2.双击我们压缩卷得到的"空闲"
+			EFL  1G	 				 主分区			//  固态
+			swap 和内存卡一样大(16G) 逻辑分区		// 机械
+			/ 	 剩下的空间			 主分区			// 机械
+		3."引导的设备"选择"..windows Boot Manager"
+	9.安装
+2.解决启动卡死:
+	显卡驱动不匹配
+	解决办法:
+		https://www.cnblogs.com/masbay/p/10718514.html
+		1.选择ubuntu高级选项，回车
+		2.选择恢复（recovery）模式
+		3.选择resume,回车进入系统。
+		sudo gedit /etc/default/grub
+		将其中的quiet splash修改为quiet splash nomodeset并保存;
+		sudo update-grub
+	
+3.系统引导
+	bios里面,在"操作系统的启动管理员"上按下enter,将ubuntu移到第一个,按F10保存
+
+	
