@@ -84,9 +84,9 @@
 		cp include/* /usr/local/cuda-10.0/include
 		cp lib64/* /usr/local/cuda-10.0/lib64
 【六】安装caffe
-	参考<Caffe 安装教程>		
+	参考Doc/<Caffe 安装教程>		
 		
-	
+	 
 		
 
 
