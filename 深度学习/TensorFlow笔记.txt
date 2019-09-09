@@ -1,0 +1,96 @@
+
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+				window TensorFlow环境搭建
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+1.先安装Anaconda(Python3.5版本)
+2.打开Anaconda Prompt
+	anaconda search -t conda tensorflow
+	// 找到win64那一项(dhirschfeld/tensorflow)
+	anaconda show dhirschfeld/tensorflow
+	得到对应的安装命令.
+	执行安装命令: 
+	conda install --channel https://conda.anaconda.org/dhirschfeld tensorflow
+3.验证是否安装成功
+	打开Notebook,然后执行 import tensorflow,如果没有报错,表示安装成功。
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+				变量
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+	import tensorflow as tf
+
+	w = tf.Variable([[0.5,1.0]])   # 定义行向量
+	x = tf.Variable([[2.0],[1.0]]) # 定义列向量
+	y = tf.matmul(w,x)             # 行向量乘以列向量
+	print(y)                       # 打印y的信息
+	init_op = tf.global_variables_initializer() #初始化全局变量
+	with tf.Session() as ss:       # ss表示一个计算区域,用来计算 
+		ss.run(init_op)            # 初始化化变量
+		print(y.eval())            # 打印出y的值
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+				基本操作
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂	
+【一】基本数据操作
+	import numpy as np
+	tf.zeros([3,4], int32) # [[0,0,0,0],[0,0,0,0],[0,0,0,0]] #初始化一个三行4列的0矩阵
+	tf.zeros([3,4], int32) # [[1,1,1,1],[1,1,1,1],[1,1,1,1]] #初始化一个三行4列的1矩阵
+
+	#tensor is [[1,2,3],[ 4,5,6]]
+	tf.zeros_like(tensor) #  [[0,0,0,0],[0,0,0,0]] #创建一个与tensor维度相同的0矩阵
+	tf.zeros_like(tensor)           #  [[1,1,1,1],[1,1,1,1]] #创建一个与tensor维度相同的0矩阵
+	cons = tf.constant([1,2,3])     # 定义常量矩阵
+	tf.constant(-1.0,chape=[2,3])   # 构造2行,3列的矩阵,所有元素都为-1.0
+	tf.linspace(10.0,12.0,3,name="linspace") # [10.0 11.0 12.0]
+	#start is 3, limit is 18, delta is 3
+	tf.range(start, limit, delta) # [3,6,9,12,15]
+	c = tf.constant([[1,2],[3,4,[5,6]]])
+	shuff = tf.random_shuffle(c) # 对c中的元素洗牌
+	print(sess.run(shuff))       # 得到洗牌后的结果
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
+【二】循环操作
+	import tensorflow as tf
+	#循环赋值
+
+	state = tf.Variable(0) # 只会赋值一次
+	new_value = tf.add(state, tf.constant(1)) # new_value = state +1
+	update = tf.assign(state, new_value)      # 将new_value赋值给state
+
+	with tf.Session() as ss: # 创建计算块
+		ss.run(tf.global_variables_initializer()) # 初始化前面的变量操作
+		# 第1次循环
+		print(ss.run(new_value)) # 1, 运行了tf.add(state, tf.constant(1))
+		print(ss.run(update))    # 1,  运行了tf.assign(state, new_value)
+		print(ss.run(state))     # 1,
+		
+		# 第2次循环
+		print(ss.run(new_value)) # 2, 运行了tf.add(state, tf.constant(1))
+		print(ss.run(update))    # 2,  运行了tf.assign(state, new_value)
+		print(ss.run(state))     # 2,
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
+【三】numpy数据结构转tf
+	import numpy as np
+	a = np.zeros([3,3])
+	tf_a = tf.convert_to_tensor(a)
+	with tf.Session() as ss:
+		print(ss.run(tf_a))	
+	//结果
+		[[0. 0. 0.]
+		 [0. 0. 0.]
+		 [0. 0. 0.]]
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁	
+【四】run时赋值
+	in1 = tf.placeholder(tf.float32)	// float32类型
+	in2 = tf.placeholder(tf.float32)	// float32类型
+	out = tf.multiply(in1,in2)			// 乘法
+	with tf.Session() as ss:
+		 print(ss.run(out, feed_dict={in1:[7.0], in2:[2.0]})) // run时,分别对in1和in2赋值
+
+
+
+
+
+
+
+
+
+
+
+
