@@ -1,106 +1,143 @@
-(一)顺序表: 就是结构体
-######################################################################################
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂
+				一、 排序算法
+▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂▂
+【一】冒泡排序算法
+	//例子: 输入一个数据集, 然后进行冒泡排序
+	int main()
+	{
+		char input[255];
+		char str[255];
+		char *tokon;
+		int i = 0;
+		vector<int> vec;
 
-######################################################################################
-(二)栈:
-1.先进后出
-2.如何实现栈的操作: 人为的实现先进后出
-	1.用顺序表实现
-		class stack
-		{
-		public:
-			stack(int size) : size(size)
-			{   this->top = -1;   // 表示栈是空的
-				pstack = new int[size];
-				memset(pstack, 0, sizeof(4*size));
-			}
-		void push(int val)  // 压栈
-		{   if(top+1 > size-1) {    // 超出了边界
-				cerr<<"stack full\n";
-				return;
-			}
-			pstack[++top] = val; // 第0,1,2
+		cin>>input; // "A={13,5,26,50,23,816,2,3,516,6,64,9,651,2,54,61,6}"
+		int len = strlen(input);
+		strncpy(str, input+3, len-3-1);
+		char *token = strtok(str, ",");
+		vec.push_back(atoi(token));
+		while(token) {
+			token = strtok(NULL, ",");	// 分割字符串
+			if (token)
+				vec.push_back(atoi(token));
 		}
-		int pop()  // 出栈
-		{	if(top == -1){    //栈是空的
-				cerr<<"stack empty\n";
-				return -1;
-			}
-			if(top >= 0){
-				int tmp = pstack[top--];
-				return tmp;
-			}
-		}
-		~stack() {delete pstack;}
-		private:
-			int top;    // 栈顶位置
-			int size;   // 栈大小
-			int *pstack;// 栈空间指针
-		};
-	2.用链表实现栈: 新数据放在链表尾部, 取数据时从尾部取。
-		typedef list<int> list_int;
-		class stack
-		{
-		public:
-			stack(){list.clear();}
-			void push(int val)				// 压栈
-			{	list.push_back(val);}
-			int pop()						// 出栈
-			{	if(list.empty()){
-					cout<<"stack empty\n";
-					return -1;
+		qDebug()<<vec;
+		qDebug()<<vec.size();
+		for(i=0; i < vec.size();i++)
+			for(int j=i+1; j<(vec.size()); j++){
+				if (vec[i] > vec[j]) {
+					vec[i] += vec[j];	// 交换值
+					vec[j] = vec[i] - vec[j];
+					vec[i] = vec[i] - vec[j];
 				}
-				int tmp = list.back();
-				list.pop_back();
-				return tmp;
 			}
-		private:
-			list_int list;  // 链表容器
-		};
-######################################################################################
-(三)队列
-1.跟栈的唯一区别是先进先出: 出队, 入队
+		qDebug()<<vec;
+		return 0;
+	}
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】快速排序算法
+	1.从左往右依次选取一个参考值
+	2.选定参考之后，L下标从左往右遍历, R下标从右往左遍历（优先移动）。
+	3.L和R交替遍历。 如果R=L,遍历结束。并将参考值置于重合位置上
+	4.L遍历时：
+		1.如果L下标的值 < 参考值:  那么L继续向前遍历
+		2.如果L下标的值 > 参考值:  那么将L下标指向的值赋值R下标指向的位置, 同时R向左一步
+	5.R遍历时：
+		1.如果R下标的值 < 参考值:  那么将R下标指向的值赋值L下标指向的位置, 同时L向右一步
+		2.如果R下标的值 > 参考值:  那么R继续向左遍历
+	6.对排序后的两个部分再进行排序。
+	7.
+		void sort(int arry[], int low, int high)
+		{
+			if (high <= low)
+				return;
+			int i=low, j = high;
+			int key = arry[low];
+			while (1) {
+				while(arry[++i] < key) {
+					if (i == high)
+						break;
+				}
+				while(arry[--j] > key) {
+					if (j == low)
+						break;
+				}
+				if (i >= j)
+					break;
+				// 交换i,j下标对应的值（i对应的值 > key > j对应的值）
+				arry[i] += arry[j];
+				arry[j] = arry[i] - arry[j];
+				arry[i] -= arry[j];
+			}
+			// 到这儿的情况是,i>j或者i=j。（j对应的值 <= key <= i对应的值）
+			// 交换key和j的值
+			int temp = arry[low];
+			arry[low] = arry[j];
+			arry[j] = temp;
+			sort(arry, low, j-1);
+			sort(arry, j+1, high);
+		}
+		int main()
+		{
+			int a[] = {57, 68, 59, 52, 72, 28, 96, 33, 24};
+			//int a[] = {3,5,1,4};
+			sort(a, 0, sizeof(a) / sizeof(a[0]));/*这里原文第三个参数要减1否则内存越界*/
+			for(int i = 0; i < sizeof(a) / sizeof(a[0]); i++)
+				cout << a[i] << " ";
 
-######################################################################################
-(四)树:(每一个节点都可以分成若干接点)
-①基本概念: 
-	1.根(根节点): 是一个相对的概念, 只要有分叉, 那么这个节点就是根节点(父节点)
-	2.叉(叉节点): 也是一个相对概念, 只要是分叉生成的节点都是叶子节点(孩子节点)
-
-######################################################################################
-(五)二叉树(每一个根节点分的叉数不超过2个(也可以是一个或者没有))
-					1
-			2 		 		   3	
-	   4  		 5	      6   	 	7	
-	8	  9	  10   11  12   13	 14  15
-  
-①基本概念: 
-	1.满二叉树: 每个根节点都有两个叉
-	2.左节点(左孩子), 右节点(右孩子)
-	3.数的深度: 就是树的层数
-	4.满二叉树的的高低为h, 节点数为n:
-		有 n=2^-1
-②二叉树的遍历
-	1.前序: 根->左->右 		
-		1.最开始的根节点一定是最顶层的根
-		2.如果根是递归的,也要遵循:根->左->右
-		3.示例: 1 2, 4 8 9, 5 10 11, 3, 6 12 13, 7 14 15
+			return 0;
+		}
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【二】插入排序算法
+	// 顺序地把待排序的各个记录按其关键字插入到已排序后的适当位置处。
+	int a[] = {23,34,56,78,65,90,88,92,18,21};
+		int i,j;
+		  for( i=1;i<a.length;i++) {
+			 int temp=a[i];
+			 for(  j=i-1;j>=0&&temp<a[j];j--) 
+					a[j+1]=a[j]; 
+			 a[j+1]=temp;
+			 System.out.print("第 "+i+" 次排序结果：");
+			 showData(a);
+	 }	
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【三】手写strcat,
+	char str1[100];
+	char str2[10];
+	gets(str1);
+	gets(str2);
+	char *p1 = str1;
+	char *p2 = str2;
+	int k =strlen(str1);
+	p1 = p1 + k;
+	while (*p2)
+		*(p1++)= *(p2++);
+	
+▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
+【四】手写strstr,
+	char *strstr(const char *src, const char *sub)
+	{
+		const char *t1;
+		const char *t2;
+		while(src) 
+		{
+			t1 = src;
+			t2 = sub;
+			do {
+				if (!*t2)
+				return src;
+			}while(*t1++ == *t2++);
+			src++
+		}
+		return NULL;
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
 		
-	2.中序: 左->根->右 		
-		1.最开始的左节点是最下层,最左边的那个左节点
-		2.如果根节点是上一层根节点的左节点,那么也满足左->根->右
-		3.示例: 849, 5 10 11, 2, 6 12 13, 14 15 7, 3, 1,
-		
-	3.后序: 左->右->根
-		894, 10 11 5, 12 13 6, 14 15 7, 3, 1
-	4.按层: 从上到下, 从左到右
-		1,2,3,4.....15
-
-
-
-
-
-
-
-
-
