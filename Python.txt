@@ -1,0 +1,13 @@
+
+
+
+主要内容:
+	python3的常用语法
+	计算机仿真
+
+
+原始字符串
+	str = r"c:\die"	// str="c:\\die"
+
+random 模块
+	(random int)
