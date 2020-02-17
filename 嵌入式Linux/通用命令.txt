@@ -22,9 +22,9 @@ set netmask 255.255.255.0
 ##############################################################################
 // 挂接网络文件系统到子目录
 sudo vi /etc/exports
-/work/nfs_root/first_fs *(rw,sync,no_root_squash)	// 服务器允许目录被挂接
-sudo /etc/init.d/nfs-kernel-server restart			// 重启服务器的nfs支持系统
-mount -t nfs -o nolock,vers=2 192.168.2.240:/work /mnt/work		// vers=2: nfs协议版本号
+/work/nfs_root/first_fs *(rw,sync,no_root_squash)// 服务器允许目录被挂接
+sudo /etc/init.d/nfs-kernel-server restart	 // 重启服务器的nfs支持系统
+mount -t nfs -o nolock,vers=2 192.168.2.240:/work /mnt/work		F// vers=2: nfs协议版本号
 
 ##############################################################################
 // PC下载文件系统
