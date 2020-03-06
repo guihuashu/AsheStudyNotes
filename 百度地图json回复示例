@@ -1,6 +1,12 @@
 http://api.map.baidu.com/reverse_geocoding/v3/?ak=R73PuliBqrHPlRLb4GoAkOEK5XdaRK4Q&output=json&coordtype=wgs84ll&location=31.225696563611,121.49884033194
 //http://api.map.baidu.com/reverse_geocoding/v3/?ak=%1&output=json&coordtype=wgs84ll&location=%2,%3
 
+
+
+http://api.map.baidu.com/reverse_geocoding/v3/?ak=R73PuliBqrHPlRLb4GoAkOEK5XdaRK4Q&output=json&coordtype=wgs84ll&location=23.038579,113.393109
+http://api.map.baidu.com/reverse_geocoding/v3/?ak=R73PuliBqrHPlRLb4GoAkOEK5XdaRK4Q&output=json&coordtype=wgs84ll&location=113.393109,23.038579
+
+
 {"status":0,
  "result":{ "location":{"lng":121.50989077799084,"lat":31.22932842411674},
 			"formatted_address":"上海市黄浦区中山南路187",
